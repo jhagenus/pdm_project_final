@@ -2,6 +2,7 @@ import gym
 from urdfenvs.robots.generic_urdf import GenericUrdfReacher
 import numpy as np
 import matplotlib.pyplot as plt
+from examples.pdm_project_final.obstacles_for_rrt import sphereObst1, obst1Dict
 
 def removearray(L,arr):
     ind = 0
@@ -36,6 +37,27 @@ def find_nearest_node(goal_pos,rrt,check_value):
             nearest_node = node
     return nearest_node
 
+def tangent_line_to_circle(location_circle,path,radius_circle,radius_robot):
+    # Define the center point and radius of the circle
+    # Example values
+    (Px, Py) = (location_circle[0], location_circle[1])
+    (Cx, Cy) = (path[0], path[1])
+    a = radius_circle + radius_robot
+
+    b = np.sqrt((Px - Cx)**2 + (Py - Cy)**2)  # hypot() also works here
+    th = np.arccos(a / b)  # angle theta
+    d = np.arctan2(Py - Cy, Px - Cx)  # direction angle of point P from C
+    d1 = d + th  # direction angle of point T1 from C
+    d2 = d - th  # direction angle of point T2 from C
+
+    T1x = Cx +  a * np.cos(d1)
+    T1y = Cy * np.sin(d1)
+    T2x = Cx * np.cos(d2)
+    T2y = Cy * np.sin(d2)
+
+    return T1x,T1y, T2x, T2y
+
+
 def gen_tree_visual(limit,path,i):
     new_list = []
     for j in range(limit+2):
@@ -59,11 +81,15 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
     new_point = env.reset()
     
     env.add_walls()
+    
     if obstacles:
-        from examples.pdm_project_final.obstacles_for_rrt import (
-            sphereObst1,
-        )
         env.add_obstacle(sphereObst1)
+    
+    #location obstacle 
+    location_obstacle = obst1Dict['geometry']['position']
+    obstacle_radius = obst1Dict['geometry']['radius']
+
+    radius_of_robot = 0.2
     
     #Make list where the random values can be stored
     rrt = []
@@ -71,6 +97,12 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
     while(True):
         # Sample a random point in the environment
         random_pos = np.concatenate((np.random.uniform(low=-0.5, high=3,size = 2),0),axis = None)
+
+        #in this case check if random point is generated in obstacle
+        
+        if((random_pos[0]-location_obstacle[0])**2 + (random_pos[1]-location_obstacle[1])**2 <= np.sqrt(obstacle_radius + radius_of_robot)):
+            continue
+
         # Find the nearest node in the RRT
         rrt.append(random_pos)
         if np.linalg.norm(random_pos - goal_pos) < 0.3:
@@ -88,6 +120,7 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
     check = np.array(rrt[-1])
 
     print(f'total paths generated = {limit}')
+
     #check which row to copy for the final path
     row_to_copy = 0 
     
@@ -102,6 +135,18 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
                     if (i > 0 and path[j,i,0] == 0 and path[j,i,1] == 0):
                         break
                     nearest_node = find_nearest_node(goal_pos,rrt,path[j,i,:])
+
+                    # circle obstacle check
+                    
+                    x1,y1,x2,y2 = tangent_line_to_circle(location_obstacle,path[j,i,:],obstacle_radius,radius_of_robot)
+
+                    tangent_1 = (x1 - path[j,i,0]) / (y1 - path[j,i,1])
+                    tangent_2 = (x2 - path[j,i,0]) / (y2 - path[j,i,1])
+                    tangent_check = (nearest_node[0] - path[j,i,0]) / (nearest_node[1] - path[j,i,1])
+
+                    if(tangent_1 <= tangent_check <= tangent_2 or tangent_2 <= tangent_check <= tangent_1):
+                        continue 
+                    # succeeded the check
                     dist = np.linalg.norm(path[j,i,:] - nearest_node)
                     if(dist < dist_history):
                         dist_history = dist
@@ -146,6 +191,8 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
     #make plot of final path
     plot_path = np.array(path_to_follow)
     plt.plot(plot_path[:,0],plot_path[:,1], color = 'r')
+    circle_1 =plt.Circle((location_obstacle[0], location_obstacle[1]), obstacle_radius, color='r')
+    plt.gca().add_patch(circle_1)
     plt.show()
 
     for q in range(len(path_to_follow)-1):
@@ -167,3 +214,5 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
 
 if __name__ == "__main__":
     run_point_robot(render=True)
+
+
