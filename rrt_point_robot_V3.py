@@ -36,6 +36,14 @@ def find_nearest_node(goal_pos,rrt,check_value):
             nearest_node = node
     return nearest_node
 
+def gen_tree_visual(limit,path,i):
+    new_list = []
+    for j in range(limit+2):
+        if (j > 0 and path[i,j,0] == 0 and path[i,j,1] == 0):
+            break
+        new_list.append(path[i,j,:])
+    return np.array(new_list)
+
 
 def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True):
     robots = [
@@ -46,7 +54,7 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
     )
 
     start_pos = np.array([0, 0, 0])
-    goal_pos = np.array([1, 1, 0])
+    goal_pos = np.array([2, 2, 0])
 
     new_point = env.reset()
     
@@ -62,11 +70,10 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
     
     while(True):
         # Sample a random point in the environment
-        random_pos = np.concatenate((np.random.uniform(low=-0.5, high=1.5,size = 2),0),axis = None)
+        random_pos = np.concatenate((np.random.uniform(low=-0.5, high=3,size = 2),0),axis = None)
         # Find the nearest node in the RRT
         rrt.append(random_pos)
-        if np.linalg.norm(random_pos - goal_pos) < 0.2:
-            print('path is found')
+        if np.linalg.norm(random_pos - goal_pos) < 0.3:
             break
         
     #create array for the tree
@@ -113,61 +120,50 @@ def run_point_robot(max_iterations=500, render=False, goal=True, obstacles=True)
             removearray(rrt,found_connection)
         else:
             for t in range(path.shape[1]):
-                if (t > 1 and int(path[row_to_copy,t,0]) == 0 and int(path[row_to_copy,t,1]) == 0):
+                if (t > 1 and path[row_to_copy,t,0] == 0 and path[row_to_copy,t,1] == 0):
                     path[-1,t,:] = goal_pos
                     break
                 path[-1,t,:] = path[row_to_copy,t,:]
             
             print("path to target found")
 
+    
+    for i in range(limit + 1): 
+        new_array = gen_tree_visual(limit,path,i)
+        plt.plot(new_array[:,0],new_array[:,1],color = 'b')
 
-
-    # PROBLEM IS IT IS NOT PLOTTING AL THE TREES
-
-    # for i in range(limit + 2): #limit+2
-    #     new_list = []
-    #     for j in range(limit+2):
-    #         if (j > 1 and int(path[i,j,0]) == 0 and int(path[i,j,1]) == 0):
-    #             break
-    #         new_list.append(path[i,j,:])
-    #     new_list = np.array(new_list)
-    #     plt.plot(new_list[:,0],new_list[:,1])
-
-    # plt.show()
-
-
-    deviation_check_x = np.inf
-
+    
     path_to_follow = []
     for j in range(limit+2):
-        if (j > 1 and int(path[-1,j,0]) == 0 and int(path[-1,j,1]) == 0):
+        if (j > 0 and path[-1,j,0] == 0 and path[-1,j,1] == 0):
             break
         path_to_follow.append(path[-1,j,:])
 
     #print the points to the path
+    print("path it will follow")
     print(path_to_follow)
 
     #make plot of final path
     plot_path = np.array(path_to_follow)
-    plt.plot(plot_path[:,0],plot_path[:,1])
+    plt.plot(plot_path[:,0],plot_path[:,1], color = 'r')
     plt.show()
 
-    deviation_check_x = np.inf
-    while (len(path_to_follow) > 1):
-        current_location = path_to_follow[0]
-        desired_location = path_to_follow[1]
+    for q in range(len(path_to_follow)-1):
+        deviation_check_x = np.inf
+        while (True):
+            current_location = path_to_follow[0]
+            desired_location = path_to_follow[1]
 
-        action = control_algorithm(current_location, desired_location)
+            action = control_algorithm(current_location, desired_location)
 
-        ob,_,_,_ = env.step(action)
-        
-        deviation_x = abs( (ob['robot_0']['joint_state']['position'][0] - desired_location[0]) / desired_location[0] )
+            ob,_,_,_ = env.step(action)
+            deviation_x = abs( (ob['robot_0']['joint_state']['position'][0] - desired_location[0]) / desired_location[0] )
 
-        if deviation_x > deviation_check_x:
-            removearray(path_to_follow,current_location)
-            path[0] = np.array([ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1], 0])
-        
-        deviation_check_x = deviation_x
+            if deviation_x > deviation_check_x:
+                removearray(path_to_follow,current_location)
+                path_to_follow[0] = np.array([ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1], 0])
+                break
+            deviation_check_x = deviation_x
 
 if __name__ == "__main__":
     run_point_robot(render=True)
