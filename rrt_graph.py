@@ -22,6 +22,23 @@ class Circle:
     def __init__(self, position, radius):
         self.position = position
         self.radius = radius
+    
+    def point_collision(self, point_pos):
+        """Check if a point is inside the circle.
+            - point_pos: The position of the point.
+        
+        Returns:
+            - True if the point is inside the circle.
+            - False if the point is outside the circle.
+        """
+        # Calculate the distance between the point and the circle.
+        dist = distance(point_pos, self.position)
+
+        # If the distance between the point and the circle is less than the radius, then the point is inside the circle.
+        if dist < self.radius:
+            return True
+
+        return False
 
 
 def distance(source_pos, target_pos):
@@ -49,11 +66,21 @@ def angle(source_pos, target_pos):
 
 
 class RRT:
-    """A class to represent a Rapidly-Exploring Random Tree (RRT)."""
-    def __init__(self, start_pos, goal_pos, goal_thresh, max_iterations, max_step_size, n_obstacles):
+    """A class to represent a Rapidly-Exploring Random Tree (RRT).
+        - start_pos: The position of the start node. (x, y, z)
+        - goal_pos: The position of the goal node. (x, y, z)
+        - goal_thresh: The distance threshold for the goal. (float)
+        - field_dimensions: The dimensions of the field. (x, y, z)
+        - max_iterations: The maximum number of iterations to run the RRT algorithm. (int)
+        - max_step_size: The maximum step size for the RRT algorithm. (float)
+        - n_obstacles: The number of obstacles to create. (int)
+        """
+
+    def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles):
         self.start_pos = start_pos
         self.goal_pos = goal_pos
         self.goal_thresh = goal_thresh
+        self.field_dimensions = field_dimensions
         self.max_iterations = max_iterations
         self.max_step_size = max_step_size
         self.n_obstacles = n_obstacles
@@ -113,120 +140,96 @@ class RRT:
             # Loop to ensure that the circle is not created on the start or goal position
             while True:
                 # Randomly generate radius and position of circle
-                radius = random.uniform(0.1, 0.5)
-                x = random.uniform(1, 2)
-                y = random.uniform(1, 2)
+                r_min, r_max = min(self.field_dimensions[0:2])/20, min(self.field_dimensions[0:2])/10
+                x_min, x_max = 0, self.field_dimensions[0]
+                y_min, y_max = 0, self.field_dimensions[1]
 
-                # Check if circle is created on start or goal position
-                if((x-self.start_pos[0])**2 + (y-self.start_pos[1])**2 <= radius**2 or (x-self.goal_pos[0])**2 + (y-self.goal_pos[1])**2 <= radius**2):
+                radius = random.uniform(r_min, r_max)
+                x = random.uniform(x_min, x_max)
+                y = random.uniform(y_min, y_max)
+
+                # Create circle object
+                circle = Circle([x, y], radius)
+
+                # Check if circle is created on start or goal position and if so, create a new circle
+                if circle.point_collision(self.start_pos) or circle.point_collision(self.goal_pos):
                     continue
                 
-                # Create circle object and add to list of obstacles
-                circle = Circle([x, y], radius)
+                # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
 
+    
+    def random_position(self):
+        """Generate a random position within the field dimensions"""
+        
+        # Loop to ensure that the random position is not created inside an obstacle
+        while True:
+            # Generate random position
+            x = random.uniform(0, self.field_dimensions[0])
+            y = random.uniform(0, self.field_dimensions[1])
+            z = 0
+            random_pos = np.array([x, y, z])
 
-    def tangent_angles_of_circle(self, node_pos, circle_obstacle):
-        """Calculate the tangent points of a circle.
-            - node_pos: The position of the node.
-            - circle_obstacle: The circle obstacle."""
+            # Check if random position is inside an obstacle
+            collision = False
 
-        # Define the circle obstacle
-        circle_pos = circle_obstacle.position
-        r = circle_obstacle.radius
-        node_x, node_y = node_pos[0:2]
+            for obstacle in self.obstacles:
+                if obstacle.point_collision(random_pos):
+                    collision = True
+                    break
+            
+            if not collision:
+                return random_pos
+    
 
-        d = distance(node_pos, circle_pos)                          # distance between the node and the center of the circle
-        theta = angle(node_pos, circle_pos)                         # angle between the node and the center of the circle
-        alpha = np.arccos(r / d)                                    # angle between line to the center of the circle and the tangent line
-
-        d1 = theta + alpha                                          # angle of the first tangent line
-        d2 = theta - alpha                                          # angle of the second tangent line     
-
-        # Calculate the position of the tangent points
-        # tangent_1 = np.array([node_x + r * np.cos(d1), node_y + r * np.sin(d1)])
-        # tangent_2 = np.array([node_x + r * np.cos(d2), node_y + r * np.sin(d2)])
-
-        return d1, d2
-
-
-    def circle_intersection(self, source_pos, target_pos, circle_obstacle):
-        """Check if the line segment between the source and target nodes intersects with the circle.
+    def check_collision(self, source_pos, target_pos):
+        """Check if the line segment between the source and target nodes intersects with an obstacle.
             - source_pos: The position of the source node.
             - target_pos: The position of the target node.
-            - circle_obstacle: The circle obstacle."""
+        """
+        dist = distance(source_pos, target_pos)
+        d = min(self.field_dimensions[0:2])/300                          # distance between each point on the line segment
+        n = int(dist / d)                                                # number of points on the line segment
         
-        # Calculate the tangent points of the circle
-        theta_tangent1, theta_tangent2 = self.tangent_angles_of_circle(target_pos, circle_obstacle)
+        # Loop through all the points between the source and target nodes to check for collision
+        for i in range(n):
+            # Calculate the position of the point
+            point = source_pos  +  i * d * (target_pos - source_pos) / dist
 
-        # d1_x = T1x - source_pos[0]
-        # d1_y = T1y - source_pos[1]
+            # Check if the point is inside an obstacle and return True if so
+            for obstacle in self.obstacles:
+                if obstacle.point_collision(point):
+                    return True
 
-        # d2_x = T2x - source_pos[0]
-        # d2_y = T2y - source_pos[1]
-
-        # theta_tangent1 = np.arctan(d1_y/d1_x)
-        # theta_tangent2 = np.arctan(d2_y/d2_x)
-
-        dtarget_x = target_pos[0] - source_pos[0]
-        dtarget_y = target_pos[1] - source_pos[1]
-        theta_target = np.arctan(dtarget_y / dtarget_x)
-
-        # Check if the angle between the source and target node is between the two tangent angles, then the line segment intersects with the circle.
-        if (theta_tangent1 >= theta_target >= theta_tangent2) or (theta_tangent1 <= theta_target <= theta_tangent2):
-            return True
-        
+        # Return False if no collision is found
         return False
-
-
-    def create_rrt(self):
-        """Create a RRT."""
-
-        # Creating circles for the obstacles in the environment
-        self.create_circles()
-
-        # While loop to create the RRT until the goal is reached or the maximum number of iterations is reached
-        iter = 0
-        while iter <= self.max_iterations:
-            iter += 1
-
-            # Randomly generate a position for a new node
-            random_pos = np.array([random.uniform(0, 3), random.uniform(0, 3), 0])
-            
-            min_dist = np.inf
-
-            # Loop through all the nodes to find the closest reachable node to the random position and create a new node
-            for node in self.nodes:
-
-                for obstacle in self.obstacles:
-                    # Check if obstacle is a circle
-                    if type(obstacle) == Circle:
-                        # Check if the line segment between the node and the random position intersects with the circle, if so, continue to the next node
-                        if self.circle_intersection(node.position, random_pos, obstacle):
-                            continue
-                                    
-                # Calculate the distance between the node and the random position and check if it is the closest node so far
-                dist = distance(node.position, random_pos)
-                if dist < min_dist:
-                    min_dist = dist
-                    closest_node = node
-
-            # Calculate the position of the new node considering the maximum step size
-            new_pos = self.pos_with_max_step_size(closest_node.position, random_pos)
-
-            # Create a new node and add it to the RRT
-            new_node = Node(position=new_pos, parent=closest_node)
-            self.nodes.append(new_node)
-
-            # Check if the goal has been reached and if so return self.reached = True
-            if self.goal_reached(new_node):
-                self.reached = True        
-                return self.reached
+    
+    
+    def find_closest_reachable_node(self, random_pos):
+        """Find the closest node to the random position.
+            - random_pos: The position of the random node."""
         
-        # If the goal has not been reached after the maximum number of iterations, return self.reached = False
-        return self.reached
+        min_dist = np.inf
+        closest_node = None
 
+        # Loop through all the nodes to find the closest node
+        for node in self.nodes:
+
+            # Check if the random position is reachable from the node and if not, continue to the next node
+            if self.check_collision(node.position, random_pos):
+                continue
+            
+            # Calculate the distance between the random position and the node
+            dist = distance(random_pos, node.position)
+
+            # Check if the distance is smaller than the minimal distance and if so, update the minimal distance and closest node
+            if dist < min_dist:
+                min_dist = dist
+                closest_node = node
+
+        return closest_node
+    
 
     def path_to_goal(self):
         """Return list of nodes from start to goal by following parent nodes"""
@@ -242,6 +245,45 @@ class RRT:
             self.goal_path.insert(0, node)
 
         return self.goal_path
+
+
+    def create_rrt(self):
+        """Create a RRT."""
+
+        # Creating circles for the obstacles in the environment
+        self.create_circles()
+
+        # While loop to create the RRT until the goal is reached or the maximum number of iterations is reached
+        iter = 0
+        while iter <= self.max_iterations:
+            iter += 1
+
+            # Randomly generate a position for a new node
+            random_pos = self.random_position()
+
+            # Find the closest node to the random position that is reachable
+            closest_node = self.find_closest_reachable_node(random_pos)
+
+            # If no node is found, continue to the next iteration
+            if closest_node is None:
+                continue
+
+            # Calculate the position of the new node considering the maximum step size
+            new_pos = self.pos_with_max_step_size(closest_node.position, random_pos)
+
+            # Create a new node and add it to the RRT
+            new_node = Node(position=new_pos, parent=closest_node)
+            self.nodes.append(new_node)
+
+            # Check if the goal has been reached and if so return self.reached = True
+            if self.goal_reached(new_node):
+                self.path_to_goal()
+                self.reached = True        
+                return self.reached
+        
+        # If the goal has not been reached after the maximum number of iterations, return self.reached = False
+        return self.reached
+
 
 
 class PlotGraph:
@@ -314,11 +356,25 @@ if __name__ == "__main__":
     max_step_size=0.2
     goal_threshold=0.1
     n_obstacles = 2
+    field_dimensions = np.array([3, 3, 0])
 
-    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, max_iterations=max_iterations, max_step_size=max_step_size, goal_thresh=goal_threshold, n_obstacles=n_obstacles)
+
+    import timeit
+
+    start = timeit.default_timer()
+
+
+    #Your statements here
+
+    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles)
     rrt.create_rrt()
 
-    print(rrt.goal_path)
+    ###
+
+
+    stop = timeit.default_timer()
+
+    print('Time: ', stop - start)  
 
     # If goal not reached, print message
     if not rrt.reached:
@@ -328,3 +384,4 @@ if __name__ == "__main__":
         print("Goal reached!")
         graph = PlotGraph(rrt.nodes, rrt.start_pos, rrt.goal_pos, rrt.obstacles, rrt.goal_path)
         graph.create_graph()
+    
