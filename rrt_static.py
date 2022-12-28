@@ -17,11 +17,13 @@ class Node:
 
         return dist
 
+
 class Circle:
     """Circle class for obstacles"""
-    def __init__(self, position, radius):
+    def __init__(self, position, radius, robot_radius):
         self.position = position
         self.radius = radius
+        self.robot_radius = robot_radius
     
     def point_collision(self, point_pos):
         """Check if a point is inside the circle.
@@ -35,10 +37,36 @@ class Circle:
         dist = distance(point_pos, self.position)
 
         # If the distance between the point and the circle is less than the radius, then the point is inside the circle.
-        if dist < self.radius:
+        if dist < self.radius + self.robot_radius:
             return True
 
         return False
+
+    ### Copied from internet ###
+    def intersection(self, source_pos, target_pos):
+        """Check line-sphere (circle) intersection"""
+
+        dirn = target_pos - source_pos
+        dist = np.linalg.norm(dirn)
+        dirn /= dist # normalize
+
+        radius = self.radius + self.robot_radius
+
+        a = np.dot(dirn, dirn)
+        b = 2 * np.dot(dirn, source_pos - self.position)
+        c = np.dot(source_pos - self.position, source_pos - self.position) - radius * radius
+
+        discriminant = b * b - 4 * a * c
+        if discriminant < 0:
+            return False
+
+        t1 = (-b + np.sqrt(discriminant)) / (2 * a)
+        t2 = (-b - np.sqrt(discriminant)) / (2 * a)
+
+        if (t1 < 0 and t2 < 0) or (t1 > dist and t2 > dist):
+            return False
+
+        return True
 
 
 def distance(source_pos, target_pos):
@@ -70,13 +98,13 @@ class RRT:
         - start_pos: The position of the start node. (x, y, z)
         - goal_pos: The position of the goal node. (x, y, z)
         - goal_thresh: The distance threshold for the goal. (float)
-        - field_dimensions: The dimensions of the field. (x, y, z)
+        - field_dimensions: The dimensions of the field. [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
         - max_iterations: The maximum number of iterations to run the RRT algorithm. (int)
         - max_step_size: The maximum step size for the RRT algorithm. (float)
         - n_obstacles: The number of obstacles to create. (int)
         """
 
-    def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles):
+    def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_radius, plot):
         self.start_pos = start_pos
         self.goal_pos = goal_pos
         self.goal_thresh = goal_thresh
@@ -84,6 +112,9 @@ class RRT:
         self.max_iterations = max_iterations
         self.max_step_size = max_step_size
         self.n_obstacles = n_obstacles
+        self.robot_radius = robot_radius
+        self.plot = plot
+
         self.reached = False
 
         self.obstacles = []
@@ -113,22 +144,41 @@ class RRT:
             - source_pos: The position of the source node.
             - target_pos: The position of the target node.
         """
-        # If the distance between the source and target nodes is less than the maximum step size, then the target position is returned.
-        dist = distance(source_pos, target_pos)
-        if dist <= self.max_step_size:
-            return target_pos
-        
-        # Calculate the angle between the source and target node.
-        dx = target_pos[0] - source_pos[0]
-        dy = target_pos[1] - source_pos[1]
-        theta = np.arctan(dy/dx)
 
-        # Calculate the new position of the node that is a maximum step size away from the source node.
-        new_x =  source_pos[0] + self.max_step_size * np.cos(theta)
-        new_y =  source_pos[1] + self.max_step_size * np.sin(theta)
-        new_target_pos = np.array([new_x, new_y, 0])
+        dirn = np.array(target_pos) - np.array(source_pos)
+        length = np.linalg.norm(dirn)
+        dirn = (dirn / length) * min (self.max_step_size, length)
+
+        new_target_pos = np.array([source_pos[0]+dirn[0], source_pos[1]+dirn[1], 0])
 
         return new_target_pos
+
+    
+    def valid_circle(self, circle):
+        """Check if a circle is valid.
+            - circle: The circle to check.
+        """
+
+        # Check if the circle is inside the field.
+        bottom_check = circle.position[1] - circle.radius > self.field_dimensions[1][0]
+        top_check = circle.position[1] + circle.radius < self.field_dimensions[1][1]
+        left_check = circle.position[0] - circle.radius > self.field_dimensions[0][0]
+        right_check = circle.position[0] + circle.radius < self.field_dimensions[0][1]
+
+        if not (bottom_check and top_check and left_check and right_check):
+            return False
+        
+        # Check if circle is created on start or goal position and if so, create a new circle
+        if circle.point_collision(self.start_pos) or circle.point_collision(self.goal_pos):
+            return False
+
+        # Check if the circle is inside another circle.
+        for other_circle in self.obstacles:
+            dist = distance(circle.position, other_circle.position)
+            if dist < circle.radius + other_circle.radius:
+                return False
+
+        return True
 
     
     def create_circles(self):
@@ -140,24 +190,28 @@ class RRT:
             # Loop to ensure that the circle is not created on the start or goal position
             while True:
                 # Randomly generate radius and position of circle
-                r_min, r_max = min(self.field_dimensions[0:2])/20, min(self.field_dimensions[0:2])/10
-                x_min, x_max = 0, self.field_dimensions[0]
-                y_min, y_max = 0, self.field_dimensions[1]
+                field_size = [self.field_dimensions[0][1] - self.field_dimensions[0][0], self.field_dimensions[1][1] - self.field_dimensions[1][0]]
+                r_min, r_max = min(field_size)/40, min(field_size)/20
+                x_min, x_max = self.field_dimensions[0]
+                y_min, y_max = self.field_dimensions[1]
 
                 radius = random.uniform(r_min, r_max)
                 x = random.uniform(x_min, x_max)
                 y = random.uniform(y_min, y_max)
+                z = 0
 
                 # Create circle object
-                circle = Circle([x, y], radius)
+                circle = Circle([x, y, z], radius, self.robot_radius)
 
-                # Check if circle is created on start or goal position and if so, create a new circle
-                if circle.point_collision(self.start_pos) or circle.point_collision(self.goal_pos):
+                # If circle is not valid, create a new circle
+                if not self.valid_circle(circle):
                     continue
                 
                 # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
+
+         
 
     
     def random_position(self):
@@ -166,8 +220,8 @@ class RRT:
         # Loop to ensure that the random position is not created inside an obstacle
         while True:
             # Generate random position
-            x = random.uniform(0, self.field_dimensions[0])
-            y = random.uniform(0, self.field_dimensions[1])
+            x = random.uniform(self.field_dimensions[0][0], self.field_dimensions[0][1])
+            y = random.uniform(self.field_dimensions[1][0], self.field_dimensions[1][1])
             z = 0
             random_pos = np.array([x, y, z])
 
@@ -205,6 +259,15 @@ class RRT:
         # Return False if no collision is found
         return False
     
+
+    def check_intersection(self, source_pos, target_pos):
+
+        for obstacle in self.obstacles:
+            if obstacle.intersection(source_pos, target_pos):
+                return True
+
+        return False
+
     
     def find_closest_reachable_node(self, random_pos):
         """Find the closest node to the random position.
@@ -217,7 +280,7 @@ class RRT:
         for node in self.nodes:
 
             # Check if the random position is reachable from the node and if not, continue to the next node
-            if self.check_collision(node.position, random_pos):
+            if self.check_intersection(node.position, random_pos):
                 continue
             
             # Calculate the distance between the random position and the node
@@ -283,13 +346,36 @@ class RRT:
         
         # If the goal has not been reached after the maximum number of iterations, return self.reached = False
         return self.reached
+    
+
+    def run_rrt(self):
+        """Run RRT algorithm"""
+
+        # Create RRT
+        self.create_rrt()
+
+        # Check if the goal has been reached and print the result and plot the graph if so
+        if self.reached:
+            print("Goal reached!")
+            if self.plot:
+                # Plot graph of nodes and path to goal
+                plot_graph = PlotGraph(nodes=self.nodes, start_pos=self.start_pos, goal_pos=self.goal_pos, obstacles=self.obstacles, goal_path=self.goal_path, field_dimensions=self.field_dimensions)
+                plot_graph.create_graph()
+            return True
+
+        else:
+            print("Goal not reached!")
+            return False
+            
+
 
 
 
 class PlotGraph:
     """Plot graph of nodes and path to goal"""
-    def __init__(self, nodes, start_pos, goal_pos, obstacles, goal_path):
+    def __init__(self, nodes, field_dimensions, start_pos, goal_pos, obstacles, goal_path):
         self.nodes = nodes
+        self.field_dimensions = field_dimensions
         self.start_pos = start_pos
         self.goal_pos = goal_pos
         self.obstacles = obstacles
@@ -302,8 +388,8 @@ class PlotGraph:
         # set plot parameters
         plt.rcParams["figure.figsize"] = [10.00, 10.00]
         plt.rcParams["figure.autolayout"] = True
-        plt.xlim(-0.5, 3.5)
-        plt.ylim(-0.5, 3.5)
+        plt.xlim(self.field_dimensions[0][0], self.field_dimensions[0][1])
+        plt.ylim(self.field_dimensions[1][0], self.field_dimensions[1][1])
         plt.grid()
 
         # plot nodes, path to goal and obstacles
@@ -319,8 +405,8 @@ class PlotGraph:
         for obstacle in self.obstacles:
             # Check if obstacle is a circle
             if type(obstacle) == Circle:
-                circle_1 = plt.Circle((obstacle.position[0], obstacle.position[1]), obstacle.radius, color='black')
-                plt.gca().add_patch(circle_1)
+                circle = plt.Circle((obstacle.position[0], obstacle.position[1]), obstacle.radius, color='black')
+                plt.gca().add_patch(circle)
 
 
     def plot_nodes(self):
@@ -350,13 +436,15 @@ class PlotGraph:
 if __name__ == "__main__":
 
     # Set parameters
-    start_pos=np.array([0, 0, 0])
-    goal_pos=np.array([2, 2, 0])
-    max_iterations=1000
-    max_step_size=0.2
-    goal_threshold=0.1
-    n_obstacles = 2
-    field_dimensions = np.array([3, 3, 0])
+    start_pos = np.array([0, 0, 0])
+    goal_pos = np.array([2, 2, 0])
+    max_iterations = 1000
+    max_step_size = 0.3
+    goal_threshold = 0.1
+    n_obstacles = 3
+    field_dimensions = np.array([(0, 3), (0, 3), (0, 0)])
+    robot_radius = 0.2
+    plot = True
 
 
     import timeit
@@ -366,8 +454,8 @@ if __name__ == "__main__":
 
     #Your statements here
 
-    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles)
-    rrt.create_rrt()
+    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles, robot_radius=robot_radius, plot=plot)
+    rrt.run_rrt()
 
     ###
 
@@ -376,12 +464,4 @@ if __name__ == "__main__":
 
     print('Time: ', stop - start)  
 
-    # If goal not reached, print message
-    if not rrt.reached:
-        print("Goal not reached...")
-    # Else, plot graph
-    else:
-        print("Goal reached!")
-        graph = PlotGraph(rrt.nodes, rrt.start_pos, rrt.goal_pos, rrt.obstacles, rrt.goal_path)
-        graph.create_graph()
     
