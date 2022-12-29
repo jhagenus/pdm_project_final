@@ -345,7 +345,12 @@ class RRT:
             print("Goal reached!")
             if self.plot:
                 # Plot graph of nodes and path to goal
-                plot_graph = PlotGraph(nodes=self.nodes, start_pos=self.start_pos, goal_pos=self.goal_pos, obstacles=self.obstacles, goal_path=self.goal_path, field_dimensions=self.field_dimensions)
+                plot_graph = PlotGraph(nodes=self.nodes, 
+                                       start_pos=self.start_pos, 
+                                       goal_pos=self.goal_pos, 
+                                       obstacles=self.obstacles, 
+                                       goal_path=self.goal_path, 
+                                       field_dimensions=self.field_dimensions)
                 plot_graph.create_graph()
             return True
 
@@ -451,7 +456,15 @@ if __name__ == "__main__":
 
     #Your statements here
 
-    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles, robot_radius=robot_radius, plot=plot)
+    rrt = RRT(start_pos=start_pos, 
+              goal_pos=goal_pos, 
+              goal_thresh=goal_threshold, 
+              field_dimensions=field_dimensions, 
+              max_iterations=max_iterations, 
+              max_step_size=max_step_size, 
+              n_obstacles=n_obstacles, 
+              robot_radius=robot_radius, 
+              plot=plot)
     rrt.run_rrt()
 
     ###
