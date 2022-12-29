@@ -106,7 +106,7 @@ class RRT:
         - n_obstacles: The number of obstacles to create. (int)
         """
 
-    def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_radius, plot,n_dynamic_obstacles):
+    def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_radius, plot, n_dynamic_obstacles, obstacles=None):
         self.start_pos = start_pos
         self.goal_pos = goal_pos
         self.goal_thresh = goal_thresh
@@ -116,12 +116,11 @@ class RRT:
         self.n_obstacles = n_obstacles
         self.robot_radius = robot_radius
         self.plot = plot
+        self.obstacles = obstacles
 
         self.number_dynamic_objects = n_dynamic_obstacles
 
         self.reached = False
-
-        self.obstacles = []
 
         self.nodes = []
         self.nodes.append(Node(start_pos, None))
@@ -188,6 +187,8 @@ class RRT:
     def create_circles(self):
         """Create random circles"""
 
+        self.obstacles = []
+
         # Creating n_obstacles random circles
         for i in range(self.n_obstacles):
             # Count the number of dynamic objects
@@ -196,7 +197,7 @@ class RRT:
             while True:
                 # Randomly generate radius and position of circle
                 field_size = [self.field_dimensions[0][1] - self.field_dimensions[0][0], self.field_dimensions[1][1] - self.field_dimensions[1][0]]
-                r_min, r_max = min(field_size)/20, min(field_size)/10
+                r_min, r_max = min(field_size)/40, min(field_size)/20
                 x_min, x_max = self.field_dimensions[0]
                 y_min, y_max = self.field_dimensions[1]
 
@@ -205,8 +206,17 @@ class RRT:
                 y = random.uniform(y_min, y_max)
                 z = 0
 
-                # add 1 to the count
-                count += 1
+                self.dynamic_position = None
+
+                if(count < self.number_dynamic_objects):
+                    self.dynamic = True
+                    speed_x = random.uniform(0,0.1)
+                    speed_y = random.uniform(0,0.1)
+                    x_dynamic = f"{x} + {speed_x} * t"
+                    y_dynamic= f"{y} + {speed_y} * t"
+                    z_dynamic = f"{radius}"
+                    self.dynamic_position = [x_dynamic,y_dynamic,z_dynamic]
+                    
 
                 # Create circle object
                 circle = Circle([x, y, z], radius, self.robot_radius, self.dynamic_position)
@@ -215,20 +225,12 @@ class RRT:
                 if not self.valid_circle(circle):
                     continue
 
-                if(count < self.number_dynamic_objects):
-                    self.dynamic = True
-                    speed_x = random.uniform(-0.1,0.1)
-                    speed_y = random.uniform(-0.1,0.1)
-                    x_dynamic = f"{x} + {speed_x} * t"
-                    y_dynamic= f"{y} + {speed_y} * t"
-                    z_dynamic = f"{radius}"
+                # add 1 to the count
+                count += 1
                 
                 # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
-                
-
-         
 
     
     def random_position(self):
@@ -237,8 +239,9 @@ class RRT:
         # Loop to ensure that the random position is not created inside an obstacle
         while True:
             # Generate random position
-            x = random.uniform(self.field_dimensions[0])
-            y = random.uniform(self.field_dimensions[1])
+            x = random.uniform(self.field_dimensions[0][0], self.field_dimensions[0][1])
+            y = random.uniform(self.field_dimensions[1][0], self.field_dimensions[1][1])
+
             z = 0
             random_pos = np.array([x, y, z])
 
@@ -329,9 +332,10 @@ class RRT:
 
     def create_rrt(self):
         """Create a RRT."""
-
-        # Creating circles for the obstacles in the environment
-        self.create_circles()
+        
+        if self.obstacles is None:
+            # Creating circles for the obstacles in the environment
+            self.create_circles()
 
         # While loop to create the RRT until the goal is reached or the maximum number of iterations is reached
         iter = 0
@@ -371,20 +375,23 @@ class RRT:
         # Create RRT
         self.create_rrt()
 
-        # Print result
+        # Check if the goal has been reached and print the result and plot the graph if so
         if self.reached:
             print("Goal reached!")
             if self.plot:
                 # Plot graph of nodes and path to goal
-                plot_graph = PlotGraph(self.nodes, self.start_pos, self.goal_pos, self.obstacles, self.goal_path)
+                plot_graph = PlotGraph(nodes=self.nodes, 
+                                       start_pos=self.start_pos, 
+                                       goal_pos=self.goal_pos, 
+                                       obstacles=self.obstacles, 
+                                       goal_path=self.goal_path, 
+                                       field_dimensions=self.field_dimensions)
                 plot_graph.create_graph()
+            return True
 
         else:
             print("Goal not reached!")
-            
-
-
-
+            return False
 
 class PlotGraph:
     """Plot graph of nodes and path to goal"""
@@ -403,8 +410,9 @@ class PlotGraph:
         # set plot parameters
         plt.rcParams["figure.figsize"] = [10.00, 10.00]
         plt.rcParams["figure.autolayout"] = True
-        plt.xlim(-0.5, 3.5)
-        plt.ylim(-0.5, 3.5)
+        plt.xlim(self.field_dimensions[0][0], self.field_dimensions[0][1])
+        plt.ylim(self.field_dimensions[1][0], self.field_dimensions[1][1])
+
         plt.grid()
 
         # plot nodes, path to goal and obstacles
@@ -457,6 +465,8 @@ if __name__ == "__main__":
     max_step_size = 0.3
     goal_threshold = 0.1
     n_obstacles = 3
+    n_dynamic_obstacles = 1
+
     field_dimensions = np.array([(0, 3), (0, 3), (0, 0)])
     robot_radius = 0.2
     plot = True
@@ -468,8 +478,8 @@ if __name__ == "__main__":
 
 
     #Your statements here
+    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles, robot_radius=robot_radius, plot=plot, n_dynamic_obstacles=n_dynamic_obstacles)
 
-    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles, robot_radius=robot_radius, plot=plot)
     rrt.run_rrt()
 
     ###
