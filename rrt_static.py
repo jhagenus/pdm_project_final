@@ -35,6 +35,7 @@ class Circle:
     def point_collision(self, point_pos):
         """Check if a point is inside the circle.
             - point_pos: The position of the point. (x, y, z)"""
+
         # Calculate the distance between the point and the circle.
         dist = distance(point_pos, self.position)
 
@@ -217,7 +218,6 @@ class RRT:
                 # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
-
     
     def random_position(self):
         """Generate a random position within the field dimensions"""
@@ -359,7 +359,6 @@ class RRT:
             return False
             
 
-
 class PlotGraph:
     """Plot graph of nodes and path to goal.
         - nodes: List of nodes in the RRT.
@@ -368,7 +367,7 @@ class PlotGraph:
         - goal_pos: The goal position of the robot. (x, y, z)
         - obstacles: List of obstacles in the environment.
         - goal_path: List of nodes from start to goal by following parent nodes."""
-
+        
     def __init__(self, nodes, field_dimensions, start_pos, goal_pos, obstacles, goal_path):
         self.nodes = nodes
         self.field_dimensions = field_dimensions

@@ -188,7 +188,7 @@ class RRT:
         """Create random circles"""
 
         self.obstacles = []
-        
+
         # Creating n_obstacles random circles
         for i in range(self.n_obstacles):
             # Count the number of dynamic objects
@@ -217,7 +217,7 @@ class RRT:
                     z_dynamic = f"{radius}"
                     self.dynamic_position = [x_dynamic,y_dynamic,z_dynamic]
                     
-                
+
                 # Create circle object
                 circle = Circle([x, y, z], radius, self.robot_radius, self.dynamic_position)
 
@@ -231,7 +231,7 @@ class RRT:
                 # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
-         
+
     
     def random_position(self):
         """Generate a random position within the field dimensions"""
@@ -241,6 +241,7 @@ class RRT:
             # Generate random position
             x = random.uniform(self.field_dimensions[0][0], self.field_dimensions[0][1])
             y = random.uniform(self.field_dimensions[1][0], self.field_dimensions[1][1])
+
             z = 0
             random_pos = np.array([x, y, z])
 
@@ -391,7 +392,6 @@ class RRT:
         else:
             print("Goal not reached!")
             return False
-            
 
 class PlotGraph:
     """Plot graph of nodes and path to goal"""
@@ -412,6 +412,7 @@ class PlotGraph:
         plt.rcParams["figure.autolayout"] = True
         plt.xlim(self.field_dimensions[0][0], self.field_dimensions[0][1])
         plt.ylim(self.field_dimensions[1][0], self.field_dimensions[1][1])
+
         plt.grid()
 
         # plot nodes, path to goal and obstacles
@@ -465,6 +466,7 @@ if __name__ == "__main__":
     goal_threshold = 0.1
     n_obstacles = 3
     n_dynamic_obstacles = 1
+
     field_dimensions = np.array([(0, 3), (0, 3), (0, 0)])
     robot_radius = 0.2
     plot = True
@@ -477,6 +479,7 @@ if __name__ == "__main__":
 
     #Your statements here
     rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles, robot_radius=robot_radius, plot=plot, n_dynamic_obstacles=n_dynamic_obstacles)
+
     rrt.run_rrt()
 
     ###
