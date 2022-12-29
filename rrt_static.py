@@ -3,7 +3,10 @@ from matplotlib import pyplot as plt
 import random
 
 class Node:
-    """A node in the RRT tree."""
+    """A node in the RRT tree.
+        - position: The position of the node. (x, y, z)
+        - parent: The parent node. (Node)"""
+
     def __init__(self, position, parent):
         self.position = position
         self.parent = parent
@@ -19,7 +22,11 @@ class Node:
 
 
 class Circle:
-    """Circle class for obstacles"""
+    """Circle class for obstacles.
+        - position: The position of the center of the circle. (x, y, z)
+        - radius: The radius of the circle. (float)
+        - robot_radius: The radius of the robot. (float)"""
+
     def __init__(self, position, radius, robot_radius):
         self.position = position
         self.radius = radius
@@ -27,12 +34,7 @@ class Circle:
     
     def point_collision(self, point_pos):
         """Check if a point is inside the circle.
-            - point_pos: The position of the point.
-        
-        Returns:
-            - True if the point is inside the circle.
-            - False if the point is outside the circle.
-        """
+            - point_pos: The position of the point. (x, y, z)"""
         # Calculate the distance between the point and the circle.
         dist = distance(point_pos, self.position)
 
@@ -42,27 +44,32 @@ class Circle:
 
         return False
 
-    ### Copied from internet ###
     def intersection(self, source_pos, target_pos):
         """Check line-sphere (circle) intersection"""
 
+        # Calculate the direction vector and normalize it by dividing by the distance
         dirn = target_pos - source_pos
         dist = np.linalg.norm(dirn)
-        dirn /= dist # normalize
+        dirn /= dist # normalizDynamicSphereObstaclee
 
+        # Add the robot radius to the circle radius to account for the robot's size
         radius = self.radius + self.robot_radius
 
+        # Calculate the discriminant of the quadratic equation
         a = np.dot(dirn, dirn)
         b = 2 * np.dot(dirn, source_pos - self.position)
         c = np.dot(source_pos - self.position, source_pos - self.position) - radius * radius
-
         discriminant = b * b - 4 * a * c
+
+        # If the discriminant is negative, there is no intersection
         if discriminant < 0:
             return False
 
+        # Calculate the two intersection points
         t1 = (-b + np.sqrt(discriminant)) / (2 * a)
         t2 = (-b - np.sqrt(discriminant)) / (2 * a)
 
+        # If both intersection points are outside the line segment, there is no intersection
         if (t1 < 0 and t2 < 0) or (t1 > dist and t2 > dist):
             return False
 
@@ -102,7 +109,8 @@ class RRT:
         - max_iterations: The maximum number of iterations to run the RRT algorithm. (int)
         - max_step_size: The maximum step size for the RRT algorithm. (float)
         - n_obstacles: The number of obstacles to create. (int)
-        """
+        - robot_radius: The radius of the robot. (float)
+        - plot: A boolean to indicate whether to plot the RRT tree. (bool)"""
 
     def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_radius, plot):
         self.start_pos = start_pos
@@ -118,57 +126,56 @@ class RRT:
         self.reached = False
 
         self.obstacles = []
-
         self.nodes = []
         self.nodes.append(Node(start_pos, None))
-
         self.goal_path = []
 
 
     def goal_reached(self, node):
         """Check if the goal has been reached.
-            - node: The node to check.
-        """
+            - node: The node to check. (Node)"""
+
         # Calculate the distance between the node and the goal.
         dist = distance(node.position, self.goal_pos)
 
-        # If the distance between the node and the goal is less than the goal threshold, then the goal has been reached.
+        # If the distance between the node and the goal is less than the goal threshold, then the goal has been reached, otherwise it has not.
         if dist < self.goal_thresh:
             return True
-
-        return False
+        else:
+            return False
 
 
     def pos_with_max_step_size(self, source_pos, target_pos):
         """Calculate the position of the node that is a maximum step size away from the parent node.
-            - source_pos: The position of the source node.
-            - target_pos: The position of the target node.
-        """
+            - source_pos: The position of the source node. (x, y, z)
+            - target_pos: The position of the target node. (x, y, z)"""
 
+        # Calculate the direction vector between the source and target nodes and normalize it.
         dirn = np.array(target_pos) - np.array(source_pos)
         length = np.linalg.norm(dirn)
-        dirn = (dirn / length) * min (self.max_step_size, length)
 
-        new_target_pos = np.array([source_pos[0]+dirn[0], source_pos[1]+dirn[1], 0])
+        # Scale the direction vector by the maximum step size or the distance between the source and target nodes, whichever is smaller.
+        step = (dirn / length) * min(self.max_step_size, length)
+
+        # Calculate the new target position by adding the step to the source position.
+        new_target_pos = np.array([source_pos[0]+step[0], source_pos[1]+step[1], 0])
 
         return new_target_pos
 
     
     def valid_circle(self, circle):
         """Check if a circle is valid.
-            - circle: The circle to check.
-        """
+            - circle: The circle to check. (Circle)"""
 
         # Check if the circle is inside the field.
         bottom_check = circle.position[1] - circle.radius > self.field_dimensions[1][0]
         top_check = circle.position[1] + circle.radius < self.field_dimensions[1][1]
         left_check = circle.position[0] - circle.radius > self.field_dimensions[0][0]
         right_check = circle.position[0] + circle.radius < self.field_dimensions[0][1]
-
         if not (bottom_check and top_check and left_check and right_check):
             return False
         
-        # Check if circle is created on start or goal position and if so, create a new circle
+        # Check if circle is created on start or goal position.
         if circle.point_collision(self.start_pos) or circle.point_collision(self.goal_pos):
             return False
 
@@ -187,7 +194,7 @@ class RRT:
         # Creating n_obstacles random circles
         for i in range(self.n_obstacles):
 
-            # Loop to ensure that the circle is not created on the start or goal position
+            # Loop to ensure that the position and radius of the circle are valid
             while True:
                 # Randomly generate radius and position of circle
                 field_size = [self.field_dimensions[0][1] - self.field_dimensions[0][0], self.field_dimensions[1][1] - self.field_dimensions[1][0]]
@@ -210,8 +217,6 @@ class RRT:
                 # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
-
-         
 
     
     def random_position(self):
@@ -237,31 +242,12 @@ class RRT:
                 return random_pos
     
 
-    def check_collision(self, source_pos, target_pos):
-        """Check if the line segment between the source and target nodes intersects with an obstacle.
-            - source_pos: The position of the source node.
-            - target_pos: The position of the target node.
-        """
-        dist = distance(source_pos, target_pos)
-        d = min(self.field_dimensions[0:2])/300                          # distance between each point on the line segment
-        n = int(dist / d)                                                # number of points on the line segment
-        
-        # Loop through all the points between the source and target nodes to check for collision
-        for i in range(n):
-            # Calculate the position of the point
-            point = source_pos  +  i * d * (target_pos - source_pos) / dist
-
-            # Check if the point is inside an obstacle and return True if so
-            for obstacle in self.obstacles:
-                if obstacle.point_collision(point):
-                    return True
-
-        # Return False if no collision is found
-        return False
-    
-
     def check_intersection(self, source_pos, target_pos):
+        """Check if the line segment between the source and target nodes intersects with an obstacle.
+            - source_pos: The position of the source node. (x, y, z)
+            - target_pos: The position of the target node. (x, y, z)"""
 
+        # Loop through all the obstacles to check for intersection
         for obstacle in self.obstacles:
             if obstacle.intersection(source_pos, target_pos):
                 return True
@@ -271,7 +257,7 @@ class RRT:
     
     def find_closest_reachable_node(self, random_pos):
         """Find the closest node to the random position.
-            - random_pos: The position of the random node."""
+            - random_pos: The position of the random node. (x, y, z)"""
         
         min_dist = np.inf
         closest_node = None
@@ -372,7 +358,14 @@ class RRT:
 
 
 class PlotGraph:
-    """Plot graph of nodes and path to goal"""
+    """Plot graph of nodes and path to goal.
+        - nodes: List of nodes in the RRT.
+        - field_dimensions: Dimensions of the field. [(x_min, x_max), (y_min, y_max), (z_min, z_max)]
+        - start_pos: The start position of the robot. (x, y, z)
+        - goal_pos: The goal position of the robot. (x, y, z)
+        - obstacles: List of obstacles in the environment.
+        - goal_path: List of nodes from start to goal by following parent nodes."""
+
     def __init__(self, nodes, field_dimensions, start_pos, goal_pos, obstacles, goal_path):
         self.nodes = nodes
         self.field_dimensions = field_dimensions
@@ -403,8 +396,11 @@ class PlotGraph:
         """Plot obstacles"""
 
         for obstacle in self.obstacles:
+
             # Check if obstacle is a circle
             if type(obstacle) == Circle:
+
+                # Create a black circle with the radius of the obstacle and add it to the plot
                 circle = plt.Circle((obstacle.position[0], obstacle.position[1]), obstacle.radius, color='black')
                 plt.gca().add_patch(circle)
 
@@ -416,7 +412,7 @@ class PlotGraph:
         plt.plot(self.start_pos[0], self.start_pos[1], marker="o", markersize=4, markeredgecolor="red", markerfacecolor="red")
         plt.plot(self.goal_pos[0], self.goal_pos[1], marker="o", markersize=4, markeredgecolor="red", markerfacecolor="red")
         
-        # Plot nodes
+        # Plot nodes as green dots
         for node in self.nodes:
             x = node.position[0]
             y = node.position[1]
@@ -427,7 +423,8 @@ class PlotGraph:
         """Plot path to goal"""
 
         for i in range(len(self.goal_path)-1):
-            # Plot line between nodes
+
+            # Plot line between nodes in the path to goal
             source = self.goal_path[i].position
             target = self.goal_path[i+1].position
             plt.plot([source[0], target[0]], [source[1], target[1]], 'b-')
