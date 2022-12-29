@@ -97,12 +97,15 @@ def run_point_robot(render=False):
 
             ob,_,_,_ = env.env.step(action)
             deviation_x = abs( (ob['robot_0']['joint_state']['position'][0] - desired_location[0]) / desired_location[0] )
+            print(ob['robot_0']['joint_state']['position'])
 
             if deviation_x > deviation_check_x:
                 removearray(path_to_follow,current_location)
                 path_to_follow[0] = np.array([ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1], 0])
                 break
             deviation_check_x = deviation_x
+        
+        break
 
 if __name__ == "__main__":
     run_point_robot(render=True)

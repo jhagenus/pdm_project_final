@@ -360,8 +360,6 @@ class RRT:
             
 
 
-
-
 class PlotGraph:
     """Plot graph of nodes and path to goal.
         - nodes: List of nodes in the RRT.
