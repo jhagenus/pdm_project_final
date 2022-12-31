@@ -9,6 +9,12 @@ from rrt_dynamic import RRT
 
 
 class Environment:
+    """The environment class that is used to create the environment for the robot to move in.
+        - field_dimensions: The dimensions of the field. [(x_min, x_max), (y_min, y_max), (z_min, z_max))]
+        - obstacles: List of the obstacles that are in the field.
+        - robots: List of the robots that are in the field.
+        - render: Boolean that determines if the environment should be rendered or not."""
+
     def __init__(self, field_dimensions, obstacles, robots, render, start_pos):
         self.field_dimensions = field_dimensions
         self.obstacles = obstacles
@@ -17,6 +23,7 @@ class Environment:
 
         self.obstacle_dict = []
 
+        # Create the environment, add the walls and obstacles
         self.env = gym.make(
             "urdf-env-v0", robots=self.robots, render=self.render
         )
@@ -26,9 +33,14 @@ class Environment:
 
     
     def generate_obstacles(self):
+        """Generates the obstacles in the environment."""
+
         for obstacle in self.obstacles:
-            if obstacle.dynamic_position == None:
-                radius = float(obstacle.radius)
+            
+            radius = float(obstacle.radius)
+
+            # Check if the obstacle is static or dynamic
+            if obstacle.trajectory == None:
                 position = obstacle.position
                 position = [position[0],position[1], radius]
                 position = np.array(position, dtype=float).tolist()
@@ -38,18 +50,19 @@ class Environment:
                     'movable': True,
                     "geometry": {"position": position, "radius": radius},
                     }
-                sphereObst = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
-                self.env.add_obstacle(sphereObst)
+            
             else:
-                radius = float(obstacle.radius)
-                position = obstacle.dynamic_positon
+                position = obstacle.trajectory
                 
-                obs_dict_dynamic = {
+                obs_dict = {
                     "type": "sphere",
                     "geometry": {"trajectory": position, "radius": radius},
                     }
-                dynamicSphereObst = DynamicSphereObstacle(name="simpleSphere", content_dict=obs_dict_dynamic)
-                self.env.add_obstacle(dynamicSphereObst)
+            
+            # Create the sphere obstacle and add it to the environment
+            sphere = DynamicSphereObstacle(name="simpleSphere", content_dict=obs_dict)
+            self.env.add_obstacle(sphere)
+
 
 def distance(source_pos, target_pos):
     """Calculate the distance between two points using the Euclidean distance formula.
@@ -62,102 +75,146 @@ def distance(source_pos, target_pos):
 
     return dist
 
-def removearray(L,arr):
-    ind = 0
-    size = len(L)
-    while ind != size and not np.array_equal(L[ind],arr):
-        ind += 1
-    if ind != size:
-        L.pop(ind)
-    else:
-        raise ValueError('array not found in list.')
 
 def control_algorithm(current_location, desired_location):
+    """Calculate the control signals for the robot to follow the path.
+        - current_location: The current location of the robot. [x, y, z]
+        - desired_location: The desired location of the robot. [x, y, z]"""
+
     # Calculate the error between the current location and the desired location
     error_x = desired_location[0] - current_location[0]
     error_y = desired_location[1] - current_location[1]
 
     # Convert the control signals to actions
     normalize_value = np.sqrt(error_x**2 + error_y**2)
-
     action = np.array([error_x/normalize_value, error_y/normalize_value, 0])
 
     return action
 
-def run_point_robot(render=False):
-    robots = [
-        GenericUrdfReacher(urdf="pointRobot.urdf", mode="vel"),
-    ]    
 
-    start_pos = np.array([-3, -3, 0])
-    goal_pos = np.array([3, 3, 0])
-    max_iterations = 1000
-    max_step_size = 1
-    goal_threshold = 0.5
-    n_obstacles = 3
-    n_dynamic_obstacles = 0
-    field_dimensions = np.array([(-3.9, 3.9), (-3.9, 3.9), (0, 0)])
-    robot_radius = 0.2
-    plot = True
+def move_robot(env, rrt):
+    """Moves the robot along the path.
+        - env: The environment that the robot is in.
+        - rrt: The RRT algorithm that is used to find the path."""
+    
+    # Disable the plotting of the RRT algorithm to speed up the process
+    rrt.plot = False
 
-    rrt = RRT(start_pos=start_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles, n_dynamic_obstacles=n_dynamic_obstacles, robot_radius=robot_radius, plot=plot, obstacles=None)
-    reached = rrt.run_rrt()
-    obstacles = rrt.obstacles
-
-    if not reached:
-        print("No path found")
-        return
-
-    env = Environment(field_dimensions=field_dimensions, obstacles=rrt.obstacles, robots=robots, render=render, start_pos=start_pos)
-
-    update_pos = start_pos
     while True:
 
-        plot = True
-
-        rrt = RRT(start_pos=update_pos, goal_pos=goal_pos, goal_thresh=goal_threshold, field_dimensions=field_dimensions, max_iterations=max_iterations, max_step_size=max_step_size, n_obstacles=n_obstacles, n_dynamic_obstacles=n_dynamic_obstacles, robot_radius=robot_radius, plot=plot, obstacles=obstacles)
+        # Run the RRT algorithm to find the path and check if the path is found
         reached = rrt.run_rrt()
-
         if not reached:
             continue
-
-        # timer van 2 seconde
-
         
-        print("Hallo")
-        
+        # Get the path to follow and check if the path is valid
         path_to_follow = [node.position for node in rrt.goal_path]
-
         if len(path_to_follow) == 1:
-            break
+            continue
 
         deviation_check_x = np.inf
 
+        # Get the current location and the desired location
         current_location = path_to_follow[0]
         desired_location = path_to_follow[1]
 
         while (True):
-
+            
+            # Calculate the action and take a step in the environment
             action = control_algorithm(current_location, desired_location)
-
             ob,_,_,_ = env.env.step(action)
 
+            # If the distance to the desired location is less than the previous distance, the location has been reached
             deviation_x = abs( (ob['robot_0']['joint_state']['position'][0] - desired_location[0]) / desired_location[0] )
-
             if deviation_x > deviation_check_x:
 
-                update_pos[0] = ob['robot_0']['joint_state']['position'][0]
-                update_pos[1] = ob['robot_0']['joint_state']['position'][1]
-                update_pos[2] = ob['robot_0']['joint_state']['position'][2]
+                # Update the current location
+                current_location[0] = ob['robot_0']['joint_state']['position'][0]
+                current_location[1] = ob['robot_0']['joint_state']['position'][1]
+                current_location[2] = ob['robot_0']['joint_state']['position'][2]
+                
+                # Update the start position of the RRT algorithm and reset the algorithm
+                rrt.update_start(current_location)
 
-                current_location = update_pos
                 break
 
             deviation_check_x = deviation_x
         
-        
-        if distance(update_pos, goal_pos) < goal_threshold:
+        # Check if the goal has been reached
+        if distance(current_location, rrt.goal_pos) < rrt.goal_threshold:
             return
 
+
+def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_step_size, goal_threshold, n_obstacles, n_dynamic_obstacles, robot_radius, plot=False, render=False):
+    """Runs the point robot in the environment.
+        - start_pos: The starting position of the robot. (x, y, z)
+        - goal_pos: The goal position of the robot. (x, y, z)
+        - field_dimensions: The dimensions of the field. [(x_min, x_max), (y_min, y_max), (z_min, z_max))]
+        - max_iterations: The maximum number of iterations that the RRT algorithm should run for. (int)
+        - max_step_size: The maximum step size that the RRT algorithm should take. (float)
+        - goal_threshold: The threshold that the RRT algorithm should use to determine if the goal has been reached. (float)
+        - n_obstacles: The number of obstacles that should be in the environment. (int)
+        - robot_radius: The radius of the robot. (float)
+        - plot: Boolean that determines if the RRT algorithm should plot the path or not. (bool)
+        - render: Boolean that determines if the environment should be rendered or not. (bool)"""
+    
+    # Create the robot
+    robots = [
+        GenericUrdfReacher(urdf="pointRobot.urdf", mode="vel"),
+    ]    
+    
+    rrt = RRT(start_pos=start_pos, 
+              goal_pos=goal_pos, 
+              goal_thresh=goal_threshold, 
+              field_dimensions=field_dimensions, 
+              max_iterations=max_iterations, 
+              max_step_size=max_step_size, 
+              n_obstacles=n_obstacles,
+              n_dynamic_obstacles=n_dynamic_obstacles,
+              robot_radius=robot_radius, 
+              plot=plot)
+
+    # Run the RRT algorithm and terminate if the goal has not been reached
+    reached = rrt.run_rrt()
+    if not reached:
+        return
+    
+    # Get the path from start to goal
+    path_to_follow = [node.position for node in rrt.goal_path]
+
+    # Create the environment
+    env = Environment(field_dimensions=field_dimensions, 
+                      obstacles=rrt.obstacles, 
+                      robots=robots, 
+                      render=render, 
+                      start_pos=start_pos)
+
+    # Move the robot along the path
+    move_robot(env, rrt)
+    
+
 if __name__ == "__main__":
-    run_point_robot(render=True)
+
+    start_pos = np.array([-3, -3, 0])
+    goal_pos = np.array([3, 3, 0])
+    max_iterations = 1000
+    max_step_size = 0.3
+    goal_threshold = 0.2
+    n_obstacles = 5
+    n_dynamic_obstacles = 0
+    field_dimensions = np.array([(-3.9, 3.9), (-3.9, 3.9), (0, 0)])
+    robot_radius = 0.2
+    plot = True
+    render = True
+
+    run_point_robot(start_pos=start_pos,
+                    goal_pos=goal_pos,
+                    field_dimensions=field_dimensions,
+                    max_iterations=max_iterations,
+                    max_step_size=max_step_size,
+                    goal_threshold=goal_threshold,
+                    n_obstacles=n_obstacles,
+                    n_dynamic_obstacles=n_dynamic_obstacles,
+                    robot_radius=robot_radius,
+                    plot=plot,
+                    render=render)
