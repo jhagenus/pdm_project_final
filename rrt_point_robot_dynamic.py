@@ -126,6 +126,9 @@ def move_robot(env, rrt):
         current_location = path_to_follow[0]
         desired_location = path_to_follow[1]
 
+        # reset the time
+        time = 0
+        
         while (True):
             
             # Calculate the action and take a step in the environment
