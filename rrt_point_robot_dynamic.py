@@ -50,6 +50,8 @@ class Environment:
                     'movable': True,
                     "geometry": {"position": position, "radius": radius},
                     }
+                # Create the sphere obstacle
+                sphere = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
             
             else:
                 position = obstacle.trajectory
@@ -58,9 +60,10 @@ class Environment:
                     "type": "sphere",
                     "geometry": {"trajectory": position, "radius": radius},
                     }
-            
-            # Create the sphere obstacle and add it to the environment
-            sphere = DynamicSphereObstacle(name="simpleSphere", content_dict=obs_dict)
+                # Create the sphere obstacle
+                sphere = DynamicSphereObstacle(name="simpleSphere", content_dict=obs_dict)
+
+            # Add the obstacle to the environment
             self.env.add_obstacle(sphere)
 
 
@@ -103,6 +106,7 @@ def move_robot(env, rrt):
     while True:
 
         # Run the RRT algorithm to find the path and check if the path is found
+        print("Looking for a new path...")
         reached = rrt.run_rrt()
         if not reached:
             continue
@@ -141,7 +145,7 @@ def move_robot(env, rrt):
             deviation_check_x = deviation_x
         
         # Check if the goal has been reached
-        if distance(current_location, rrt.goal_pos) < rrt.goal_threshold:
+        if distance(current_location, rrt.goal_pos) < rrt.goal_thresh:
             return
 
 
@@ -174,10 +178,11 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
               robot_radius=robot_radius, 
               plot=plot)
 
-    # Run the RRT algorithm and terminate if the goal has not been reached
-    reached = rrt.run_rrt()
-    if not reached:
-        return
+    # Run the RRT algorithm and run the algorithm again if the path is not found
+    while True:
+        reached = rrt.run_rrt()
+        if reached:
+            break
     
     # Get the path from start to goal
     path_to_follow = [node.position for node in rrt.goal_path]
@@ -198,8 +203,8 @@ if __name__ == "__main__":
     start_pos = np.array([-3, -3, 0])
     goal_pos = np.array([3, 3, 0])
     max_iterations = 1000
-    max_step_size = 0.3
-    goal_threshold = 0.2
+    max_step_size = 1
+    goal_threshold = 0.5
     n_obstacles = 5
     n_dynamic_obstacles = 0
     field_dimensions = np.array([(-3.9, 3.9), (-3.9, 3.9), (0, 0)])
