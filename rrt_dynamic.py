@@ -20,11 +20,12 @@ class Node:
 
 class Circle:
     """Circle class for obstacles"""
-    def __init__(self, position, radius, robot_radius, trajectory):
+    def __init__(self, position, radius, robot_radius, trajectory, trajectory_direction):
         self.position = position
         self.radius = radius
         self.robot_radius = robot_radius
-        self.trajectory = trajectory 
+        self.trajectory = trajectory
+        self.trajectory_direction = trajectory_direction
 
     
     def point_collision(self, point_pos):
@@ -168,7 +169,6 @@ class RRT:
         dirn = (dirn / length) * min (self.max_step_size, length)
 
         new_target_pos = np.array([source_pos[0]+dirn[0], source_pos[1]+dirn[1], 0])
-
         return new_target_pos
 
     
@@ -203,11 +203,11 @@ class RRT:
         """Create random circles"""
 
         self.obstacles = []
-
+        # Count the number of dynamic objects
+        count = 0
+        
         # Creating n_obstacles random circles
         for i in range(self.n_obstacles):
-            # Count the number of dynamic objects
-            count = 0
             # Loop to ensure that the circle is not created on the start or goal position
             while True:
                 # Randomly generate radius and position of circle
@@ -222,22 +222,25 @@ class RRT:
                 z = 0
 
                 trajectory = None
+                trajectory_direction = None
 
                 if(count < self.number_dynamic_objects):
                     self.dynamic = True
-                    speed_x = random.uniform(0,0.1)
-                    speed_y = random.uniform(0,0.1)
+                    speed_x = random.uniform(-0.2,0.2)
+                    speed_y = random.uniform(-0.2,0.2)
                     x_dynamic = f"{x} + {speed_x} * t"
                     y_dynamic= f"{y} + {speed_y} * t"
                     z_dynamic = f"{radius}"
                     trajectory = [x_dynamic, y_dynamic, z_dynamic]
+                    trajectory_direction = [speed_x, speed_y, 0]
                     
 
                 # Create circle object
-                circle = Circle(position=[x, y, z], radius=radius, robot_radius=self.robot_radius, trajectory=trajectory)
+                circle = Circle(position=[x, y, z], radius=radius, robot_radius=self.robot_radius, trajectory=trajectory, trajectory_direction=trajectory_direction)
 
                 # If circle is not valid, create a new circle
                 if not self.valid_circle(circle):
+                    print("Invalid circle")
                     continue
 
                 # add 1 to the count
@@ -345,9 +348,20 @@ class RRT:
         return self.goal_path
 
 
-    def create_rrt(self):
+    def create_rrt(self,time):
         """Create a RRT."""
         
+        # update positions for dynamic obstacles
+        if time > 0:
+            for obstacle in self.obstacles:
+                if obstacle.trajectory is None:
+                    continue
+                print(obstacle.trajectory_direction)
+                obstacle.position[0] = obstacle.trajectory_direction[0] * time + obstacle.position[0]
+                obstacle.position[1] = obstacle.trajectory_direction[1] * time + obstacle.position[1]
+                obstacle.position[2] = obstacle.trajectory_direction[2] * time + obstacle.position[2]
+                
+
         if self.obstacles is None:
             # Creating circles for the obstacles in the environment
             self.create_circles()
@@ -384,11 +398,11 @@ class RRT:
         return self.reached
     
 
-    def run_rrt(self):
+    def run_rrt(self,time):
         """Run RRT algorithm"""
 
         # Create RRT
-        self.create_rrt()
+        self.create_rrt(time)
 
         # Check if the goal has been reached and print the result and plot the graph if so
         if self.reached:

@@ -55,7 +55,8 @@ class Environment:
             
             else:
                 position = obstacle.trajectory
-                
+                print("dynamic_obstacle")
+                print(position)
                 obs_dict = {
                     "type": "sphere",
                     "geometry": {"trajectory": position, "radius": radius},
@@ -101,13 +102,16 @@ def move_robot(env, rrt):
         - rrt: The RRT algorithm that is used to find the path."""
     
     # Disable the plotting of the RRT algorithm to speed up the process
-    rrt.plot = False
+    rrt.plot = True
+
+    # track the time
+    time = 0
 
     while True:
 
         # Run the RRT algorithm to find the path and check if the path is found
         print("Looking for a new path...")
-        reached = rrt.run_rrt()
+        reached = rrt.run_rrt(time)
         if not reached:
             continue
         
@@ -128,8 +132,12 @@ def move_robot(env, rrt):
             action = control_algorithm(current_location, desired_location)
             ob,_,_,_ = env.env.step(action)
 
+            # update the time (dt = 0.01)
+            time += 0.01
+
             # If the distance to the desired location is less than the previous distance, the location has been reached
             deviation_x = abs( (ob['robot_0']['joint_state']['position'][0] - desired_location[0]) / desired_location[0] )
+            
             if deviation_x > deviation_check_x:
 
                 # Update the current location
@@ -180,7 +188,7 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
 
     # Run the RRT algorithm and run the algorithm again if the path is not found
     while True:
-        reached = rrt.run_rrt()
+        reached = rrt.run_rrt(time=0)
         if reached:
             break
     
@@ -206,7 +214,7 @@ if __name__ == "__main__":
     max_step_size = 1
     goal_threshold = 0.5
     n_obstacles = 5
-    n_dynamic_obstacles = 0
+    n_dynamic_obstacles = 2
     field_dimensions = np.array([(-3.9, 3.9), (-3.9, 3.9), (0, 0)])
     robot_radius = 0.2
     plot = True
