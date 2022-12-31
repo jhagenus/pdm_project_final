@@ -392,7 +392,7 @@ class RRT:
 
         # Check if the goal has been reached and print the result and plot the graph if so
         if self.reached:
-            print("Goal reached!")
+            print("Path to the goal found!")
             if self.plot:
                 # Plot graph of nodes and path to goal
                 plot_graph = PlotGraph(nodes=self.nodes, 
@@ -405,7 +405,7 @@ class RRT:
             return True
 
         else:
-            print("Goal not reached!")
+            print("Path to the goal not found...")
             return False
 
 class PlotGraph:
