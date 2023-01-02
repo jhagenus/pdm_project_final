@@ -356,7 +356,6 @@ class RRT:
             for obstacle in self.obstacles:
                 if obstacle.trajectory is None:
                     continue
-                print(obstacle.trajectory_direction)
                 obstacle.position[0] = obstacle.trajectory_direction[0] * time + obstacle.position[0]
                 obstacle.position[1] = obstacle.trajectory_direction[1] * time + obstacle.position[1]
                 obstacle.position[2] = obstacle.trajectory_direction[2] * time + obstacle.position[2]
