@@ -357,6 +357,73 @@ class RRT:
         else:
             print("Goal not reached!")
             return False
+
+    
+    def rrt_star(self):
+        """Create a RRT*."""
+        
+        new_goal_path = [self.goal_path[-1]]
+
+        n = len(self.goal_path)
+
+        goal_path = self.goal_path
+
+        while True:
+            
+            if(len(goal_path) <= 1):
+                break
+
+            destination_node = goal_path[-1]
+
+            for i, source_node in enumerate(goal_path):
+                if self.check_intersection(source_node.position, destination_node.position):
+                    continue
+                else:
+                    new_goal_path.insert(0, source_node)
+                    goal_path = goal_path[:i+1]
+                    break
+        
+        self.goal_path = new_goal_path
+    
+
+    def run_rrt_star(self):
+        """Run RRT* algorithm"""
+
+        # Create RRT
+        self.create_rrt()
+
+        # Check if the goal has been reached and print the result and plot the graph if so
+        if self.reached:
+            print("Goal reached!")
+            if self.plot:
+                # Plot graph of nodes and path to goal
+                plot_graph = PlotGraph(nodes=self.nodes, 
+                                       start_pos=self.start_pos, 
+                                       goal_pos=self.goal_pos, 
+                                       obstacles=self.obstacles, 
+                                       goal_path=self.goal_path, 
+                                       field_dimensions=self.field_dimensions)
+                plot_graph.create_graph()
+            
+            self.rrt_star()
+            
+            if self.plot:
+                # Plot graph of nodes and path to goal
+                plot_graph = PlotGraph(nodes=self.nodes, 
+                                       start_pos=self.start_pos, 
+                                       goal_pos=self.goal_pos, 
+                                       obstacles=self.obstacles, 
+                                       goal_path=self.goal_path, 
+                                       field_dimensions=self.field_dimensions)
+                plot_graph.create_graph()
+
+
+            return True
+
+        else:
+            print("Goal not reached!")
+            return False
+
             
 
 class PlotGraph:
@@ -440,7 +507,7 @@ if __name__ == "__main__":
     max_iterations = 1000
     max_step_size = 0.3
     goal_threshold = 0.1
-    n_obstacles = 3
+    n_obstacles = 8
     field_dimensions = np.array([(0, 3), (0, 3), (0, 0)])
     robot_radius = 0.2
     plot = True

@@ -135,7 +135,7 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
               plot=plot)
 
     # Run the RRT algorithm and terminate if the goal has not been reached
-    reached = rrt.run_rrt()
+    reached = rrt.run_rrt_star()
     if not reached:
         return
     
