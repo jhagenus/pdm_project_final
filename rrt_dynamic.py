@@ -388,7 +388,6 @@ class RRT:
                     continue
                 obstacle.position += obstacle.speed * time
 
-                
         if self.obstacles is None:
             # Creating circles for the obstacles in the environment
             self.create_circles()
@@ -449,6 +448,7 @@ class RRT:
         else:
             print("Path to the goal not found...")
             return False
+            
 
 class PlotGraph:
     """Plot graph of nodes and path to goal"""
