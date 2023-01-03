@@ -4,8 +4,12 @@ from MotionPlanningEnv.sphereObstacle import SphereObstacle
 from MotionPlanningEnv.dynamicSphereObstacle import DynamicSphereObstacle
 import numpy as np
 import matplotlib.pyplot as plt
+from multiprocessing import Process
+import multiprocessing as mp
+import copy
 
 from rrt_dynamic import RRT
+
 
 
 class Environment:
@@ -38,29 +42,15 @@ class Environment:
         for obstacle in self.obstacles:
             
             radius = float(obstacle.radius)
+            trajectory = obstacle.trajectory
 
-            # Check if the obstacle is static or dynamic
-            if obstacle.trajectory == None:
-                position = obstacle.position
-                position = [position[0],position[1], radius]
-                position = np.array(position, dtype=float).tolist()
-
-                obs_dict = {
-                    "type": "sphere",
-                    'movable': True,
-                    "geometry": {"position": position, "radius": radius},
-                    }
-                # Create the sphere obstacle
-                sphere = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
+            obs_dict = {
+                "type": "sphere",
+                "geometry": {"trajectory": trajectory, "radius": radius},
+                }
             
-            else:
-                position = obstacle.trajectory
-                obs_dict = {
-                    "type": "sphere",
-                    "geometry": {"trajectory": position, "radius": radius},
-                    }
-                # Create the sphere obstacle
-                sphere = DynamicSphereObstacle(name="simpleSphere", content_dict=obs_dict)
+            # Create the sphere obstacle
+            sphere = DynamicSphereObstacle(name="simpleSphere", content_dict=obs_dict)
 
             # Add the obstacle to the environment
             self.env.add_obstacle(sphere)
@@ -94,6 +84,43 @@ def control_algorithm(current_location, desired_location):
     return action
 
 
+# Function to move the robot 1 step in a straight line
+def move_robot_1_step(env, rrt, current_location, desired_location):
+    """Moves the robot 1 step in a straight line.
+        - env: The environment that the robot is in.
+        - current_location: The current location of the robot. [x, y, z]
+        - desired_location: The desired location of the robot. [x, y, z]"""
+
+    time = 0
+    deviation_check_x = np.inf
+
+    while (True):
+
+        # Calculate the action and take a step in the environment
+        action = control_algorithm(current_location, desired_location)
+        ob,_,_,_ = env.env.step(action)
+
+        # update the time (dt = 0.01)
+        time += 0.01
+
+        # If the distance to the desired location is less than the previous distance, the location has been reached
+        deviation_x = abs( (ob['robot_0']['joint_state']['position'][0] - desired_location[0]) / desired_location[0] )
+        
+        if deviation_x > deviation_check_x:
+
+            # Update the current location
+            current_location[0] = ob['robot_0']['joint_state']['position'][0]
+            current_location[1] = ob['robot_0']['joint_state']['position'][1]
+            current_location[2] = ob['robot_0']['joint_state']['position'][2]
+
+            # Update the start position of the RRT algorithm and reset the algorithm
+            rrt.update_start(current_location)
+
+            return current_location, time
+
+        deviation_check_x = deviation_x
+
+
 def move_robot(env, rrt):
     """Moves the robot along the path.
         - env: The environment that the robot is in.
@@ -102,27 +129,26 @@ def move_robot(env, rrt):
     # Disable the plotting of the RRT algorithm to speed up the process
     rrt.plot = False
 
-    # track the time
+    # Keep track of the time
     time = 0
 
-    # count to skip the first rrt search
-    count = 0
+    # Create a copy of the RRT algorithm to use for the next path
+    current_location = rrt.start_pos
+    goal_pos = rrt.goal_pos
+    goal_threshold = rrt.goal_threshold
+    total_distance = distance(current_location, goal_pos)
 
     while True:
 
-        if count > 0:
-            # Run the RRT algorithm to find the path and check if the path is found
-            print("Looking for a new path...")
-            reached = rrt.run_rrt(time)
-            if not reached:
-                continue
-        
-        # Get the path to follow and check if the path is valid
-        path_to_follow = [node.position for node in rrt.goal_path]
-        if len(path_to_follow) == 1:
+        # Check if it actually found a path and if not, try again
+        if not rrt.reached:
+            print("No valid path found, trying again...")
+            rrt.update_start(current_location)
+            rrt.run_rrt(time)
             continue
 
-        deviation_check_x = np.inf
+        # Get the path to follow and check if the path is valid
+        path_to_follow = [node.position for node in rrt.goal_path]
 
         # Get the current location and the desired location
         current_location = path_to_follow[0]
@@ -130,39 +156,21 @@ def move_robot(env, rrt):
 
         # reset the time
         time = 0
-
-        # add 1 to the count
-        count += 1
         
-        while (True):
-            
-            # Calculate the action and take a step in the environment
-            action = control_algorithm(current_location, desired_location)
-            ob,_,_,_ = env.env.step(action)
-
-            # update the time (dt = 0.01)
-            time += 0.01
-
-            # If the distance to the desired location is less than the previous distance, the location has been reached
-            deviation_x = abs( (ob['robot_0']['joint_state']['position'][0] - desired_location[0]) / desired_location[0] )
-            
-            if deviation_x > deviation_check_x:
-
-                # Update the current location
-                current_location[0] = ob['robot_0']['joint_state']['position'][0]
-                current_location[1] = ob['robot_0']['joint_state']['position'][1]
-                current_location[2] = ob['robot_0']['joint_state']['position'][2]
-                
-                # Update the start position of the RRT algorithm and reset the algorithm
-                rrt.update_start(current_location)
-
-                break
-
-            deviation_check_x = deviation_x
+        print("Moving the robot...")
+        current_location, time_of_movement = move_robot_1_step(env, rrt, current_location, desired_location)
+        time += time_of_movement
         
         # Check if the goal has been reached
-        if distance(current_location, rrt.goal_pos) < rrt.goal_thresh:
+        if distance(current_location, goal_pos) < goal_threshold:
             return
+        
+        # Else, run the RRT algorithm again
+        rrt.control_step_size_and_threshold(current_location, goal_pos, total_distance)
+        print(rrt.goal_threshold, rrt.max_step_size)
+        rrt.update_start(current_location)
+        rrt.run_rrt(time)
+        
 
 
 def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_step_size, goal_threshold, n_obstacles, n_dynamic_obstacles, robot_radius, plot=False, render=False):
@@ -196,12 +204,9 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
 
     # Run the RRT algorithm and run the algorithm again if the path is not found
     while True:
-        reached = rrt.run_rrt(time=0)
-        if reached:
+        rrt.run_rrt(time=0)
+        if rrt.reached:
             break
-    
-    # Get the path from start to goal
-    path_to_follow = [node.position for node in rrt.goal_path]
 
     # Create the environment
     env = Environment(field_dimensions=field_dimensions, 

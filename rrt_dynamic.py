@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import random
 
+
 class Node:
     """A node in the RRT tree."""
     def __init__(self, position, parent):
@@ -20,12 +21,12 @@ class Node:
 
 class Circle:
     """Circle class for obstacles"""
-    def __init__(self, position, radius, robot_radius, trajectory, trajectory_direction):
-        self.position = position
+    def __init__(self, position, radius, robot_radius, trajectory, speed):
         self.radius = radius
         self.robot_radius = robot_radius
+        self.position = position
         self.trajectory = trajectory
-        self.trajectory_direction = trajectory_direction
+        self.speed = speed
 
     
     def point_collision(self, point_pos):
@@ -110,7 +111,7 @@ class RRT:
     def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_radius, plot, n_dynamic_obstacles, obstacles=None):
         self.start_pos = start_pos
         self.goal_pos = goal_pos
-        self.goal_thresh = goal_thresh
+        self.goal_threshold = goal_thresh
         self.field_dimensions = field_dimensions
         self.max_iterations = max_iterations
         self.max_step_size = max_step_size
@@ -127,6 +128,9 @@ class RRT:
         self.nodes.append(Node(start_pos, None))
 
         self.goal_path = []
+
+        self.initial_goal_threshold = goal_thresh
+        self.initial_max_step_size = max_step_size
     
 
     def update_start(self, start_pos):
@@ -152,7 +156,7 @@ class RRT:
         dist = distance(node.position, self.goal_pos)
 
         # If the distance between the node and the goal is less than the goal threshold, then the goal has been reached.
-        if dist < self.goal_thresh:
+        if dist < self.goal_threshold:
             return True
 
         return False
@@ -221,26 +225,28 @@ class RRT:
                 y = random.uniform(y_min, y_max)
                 z = 0
 
-                trajectory = None
-                trajectory_direction = None
-
+                # Randomly generate speed of circle if it is a dynamic object and set speed to 0 if it is a static object
                 if(count < self.number_dynamic_objects):
-                    self.dynamic = True
                     speed_x = random.uniform(-0.2,0.2)
                     speed_y = random.uniform(-0.2,0.2)
-                    x_dynamic = f"{x} + {speed_x} * t"
-                    y_dynamic= f"{y} + {speed_y} * t"
-                    z_dynamic = f"{radius}"
-                    trajectory = [x_dynamic, y_dynamic, z_dynamic]
-                    trajectory_direction = [speed_x, speed_y, 0]
+                    speed_z = 0
+                else:
+                    speed_x = 0
+                    speed_y = 0
+                    speed_z = 0
+                
+                x_trajectory = f"{x} + {speed_x} * t"
+                y_trajectory = f"{y} + {speed_y} * t"
+                z_trajectory = f"{radius}"
+                trajectory = [x_trajectory, y_trajectory, z_trajectory]
+                speed = np.array([speed_x, speed_y, speed_z])
                     
 
                 # Create circle object
-                circle = Circle(position=[x, y, z], radius=radius, robot_radius=self.robot_radius, trajectory=trajectory, trajectory_direction=trajectory_direction)
+                circle = Circle(position=[x, y, z], radius=radius, robot_radius=self.robot_radius, trajectory=trajectory, speed=speed)
 
                 # If circle is not valid, create a new circle
                 if not self.valid_circle(circle):
-                    print("Invalid circle")
                     continue
 
                 # add 1 to the count
@@ -249,6 +255,15 @@ class RRT:
                 # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
+    
+
+    def update_obstacles(self, t):
+        """Update the position of the obstacles"""
+        if t > 0:
+            for obstacle in self.obstacles:
+                if np.array_equal(obstacle.speed, np.array([0,0,0])):
+                    continue
+                obstacle.position += obstacle.speed * t
 
     
     def random_position(self):
@@ -347,20 +362,33 @@ class RRT:
 
         return self.goal_path
 
+    
+    def control_step_size_and_threshold(self, current_location, goal_pos, total_distance):
+        dist = distance(current_location, goal_pos)
 
-    def create_rrt(self,time):
+        minimal_goal_threshold = 0.4
+        minimal_max_step_size = 0.5
+        
+        thresh_range = self.initial_goal_threshold - minimal_goal_threshold
+        step_range = self.initial_max_step_size - minimal_max_step_size
+        
+        scale_factor = dist/total_distance
+
+        self.goal_threshold = scale_factor * thresh_range + minimal_goal_threshold
+        self.max_step_size = scale_factor * step_range + minimal_max_step_size
+
+
+    def create_rrt(self, time):
         """Create a RRT."""
         
         # update positions for dynamic obstacles
         if time > 0:
             for obstacle in self.obstacles:
-                if obstacle.trajectory is None:
+                if np.array_equal(obstacle.speed, np.array([0,0,0])):
                     continue
-                obstacle.position[0] = obstacle.trajectory_direction[0] * time + obstacle.position[0]
-                obstacle.position[1] = obstacle.trajectory_direction[1] * time + obstacle.position[1]
-                obstacle.position[2] = obstacle.trajectory_direction[2] * time + obstacle.position[2]
-                
+                obstacle.position += obstacle.speed * time
 
+                
         if self.obstacles is None:
             # Creating circles for the obstacles in the environment
             self.create_circles()
@@ -390,6 +418,7 @@ class RRT:
             # Check if the goal has been reached and if so return self.reached = True
             if self.goal_reached(new_node):
                 self.path_to_goal()
+                print("checkpoint1")
                 self.reached = True        
                 return self.reached
         
@@ -397,7 +426,7 @@ class RRT:
         return self.reached
     
 
-    def run_rrt(self,time):
+    def run_rrt(self, time):
         """Run RRT algorithm"""
 
         # Create RRT
