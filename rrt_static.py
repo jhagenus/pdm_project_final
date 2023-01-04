@@ -127,9 +127,22 @@ class RRT:
         self.reached = False
 
         self.obstacles = []
-        self.nodes = []
-        self.nodes.append(Node(start_pos, None))
         self.goal_path = []
+
+        self.new_start_and_goal()
+    
+
+    def new_start_and_goal(self):
+        """Generate a new start and goal position for the RRT algorithm."""
+
+        # Generate a new start position 1 meter to the right of the current start position.
+        new_start_pos = np.array([self.start_pos[0] + 1, self.start_pos[1], self.start_pos[2]])
+        new_start_node = Node(new_start_pos, Node(self.start_pos, None))
+        self.nodes = []
+        self.nodes.append(new_start_node)
+
+        # Generate a new goal position 1 meter down from the current goal position.
+        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - 1, self.goal_pos[2]])
 
 
     def goal_reached(self, node):
@@ -137,7 +150,7 @@ class RRT:
             - node: The node to check. (Node)"""
 
         # Calculate the distance between the node and the goal.
-        dist = distance(node.position, self.goal_pos)
+        dist = distance(node.position, self.parking_pos)
 
         # If the distance between the node and the goal is less than the goal threshold, then the goal has been reached, otherwise it has not.
         if dist < self.goal_thresh:
@@ -292,6 +305,9 @@ class RRT:
             # Add the parent node to the start of the list
             node = node.parent
             self.goal_path.insert(0, node)
+        
+        # Add the goal_node to the end of the path
+        self.goal_path.append(Node(self.goal_pos, self.nodes[-1]))
 
         return self.goal_path
 
@@ -362,11 +378,11 @@ class RRT:
     def rrt_star(self):
         """Create a RRT*."""
         
-        new_goal_path = [self.goal_path[-1]]
+        # Add the goal node and the parking node to the new path
+        new_goal_path = self.goal_path[-2:]
 
-        n = len(self.goal_path)
-
-        goal_path = self.goal_path
+        # Remove the start and goal to make sure that the path will always include the parking node and the node to start driving forward
+        goal_path = self.goal_path[1:-1]
 
         while True:
             
@@ -382,6 +398,9 @@ class RRT:
                     new_goal_path.insert(0, source_node)
                     goal_path = goal_path[:i+1]
                     break
+        
+        # Add the start node to the new path
+        new_goal_path.insert(0, self.goal_path[0])
         
         self.goal_path = new_goal_path
     
@@ -416,7 +435,6 @@ class RRT:
                                        goal_path=self.goal_path, 
                                        field_dimensions=self.field_dimensions)
                 plot_graph.create_graph()
-
 
             return True
 
@@ -502,13 +520,13 @@ class PlotGraph:
 if __name__ == "__main__":
 
     # Set parameters
-    start_pos = np.array([0, 0, 0])
-    goal_pos = np.array([2, 2, 0])
+    start_pos = np.array([-8, -8, 0])
+    goal_pos = np.array([8, 8, 0])
     max_iterations = 1000
-    max_step_size = 0.3
+    max_step_size = 0.5
     goal_threshold = 0.1
-    n_obstacles = 8
-    field_dimensions = np.array([(0, 3), (0, 3), (0, 0)])
+    n_obstacles = 20
+    field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
     robot_radius = 0.2
     plot = True
 
@@ -529,7 +547,7 @@ if __name__ == "__main__":
               n_obstacles=n_obstacles, 
               robot_radius=robot_radius, 
               plot=plot)
-    rrt.run_rrt()
+    rrt.run_rrt_star()
 
     ###
 
