@@ -417,7 +417,6 @@ class RRT:
             # Check if the goal has been reached and if so return self.reached = True
             if self.goal_reached(new_node):
                 self.path_to_goal()
-                print("checkpoint1")
                 self.reached = True        
                 return self.reached
         

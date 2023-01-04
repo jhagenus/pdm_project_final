@@ -155,13 +155,14 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
 
 if __name__ == "__main__":
 
-    start_pos = np.array([-3, -3, 0])
-    goal_pos = np.array([3, 3, 0])
+    # Set parameters
+    start_pos = np.array([-8, -8, 0])
+    goal_pos = np.array([8, 8, 0])
     max_iterations = 1000
-    max_step_size = 0.3
+    max_step_size = 3
     goal_threshold = 0.2
-    n_obstacles = 5
-    field_dimensions = np.array([(-3.9, 3.9), (-3.9, 3.9), (0, 0)])
+    n_obstacles = 20
+    field_dimensions = np.array([(-9.9, 9.9), (-9.9, 9.9), (0, 0)])
     robot_radius = 0.2
     plot = True
     render = True
