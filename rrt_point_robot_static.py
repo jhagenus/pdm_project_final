@@ -106,7 +106,7 @@ def move_robot(path_to_follow, env):
             deviation_check_x = deviation_x
     
 
-def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_step_size, goal_threshold, n_obstacles, robot_radius, plot=False, render=False):
+def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_step_size, goal_threshold, n_obstacles, robot_radius, turn_radius, plot=False, render=False):
     """Runs the point robot in the environment.
         - start_pos: The starting position of the robot. (x, y, z)
         - goal_pos: The goal position of the robot. (x, y, z)
@@ -132,6 +132,7 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
               max_step_size=max_step_size, 
               n_obstacles=n_obstacles, 
               robot_radius=robot_radius, 
+              turn_radius=turn_radius,
               plot=plot)
 
     # Run the RRT algorithm and terminate if the goal has not been reached
@@ -164,6 +165,7 @@ if __name__ == "__main__":
     n_obstacles = 20
     field_dimensions = np.array([(-9.9, 9.9), (-9.9, 9.9), (0, 0)])
     robot_radius = 0.2
+    turn_radius = 1.37
     plot = True
     render = True
 
@@ -175,5 +177,6 @@ if __name__ == "__main__":
                     goal_threshold=goal_threshold,
                     n_obstacles=n_obstacles,
                     robot_radius=robot_radius,
+                    turn_radius=turn_radius,
                     plot=plot,
                     render=render)
