@@ -137,14 +137,16 @@ class RRT:
     def new_start_and_goal(self):
         """Generate a new start and goal position for the RRT algorithm."""
 
+        offset = 2
+
         # Generate a new start position 1 meter to the right of the current start position.
-        new_start_pos = np.array([self.start_pos[0] + 4, self.start_pos[1], self.start_pos[2]])
+        new_start_pos = np.array([self.start_pos[0] + offset, self.start_pos[1], self.start_pos[2]])
         new_start_node = Node(new_start_pos, Node(self.start_pos, None))
         self.nodes = []
         self.nodes.append(new_start_node)
 
         # Generate a new goal position 1 meter down from the current goal position.
-        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - 4, self.goal_pos[2]])
+        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - offset, self.goal_pos[2]])
 
 
     def goal_reached(self, node):
@@ -532,8 +534,8 @@ class PlotGraph:
         """Plot nodes as dots on graph"""
 
         # Plot start and goal position
-        plt.plot(self.start_pos[0], self.start_pos[1], marker="o", markersize=4, markeredgecolor="red", markerfacecolor="red")
-        plt.plot(self.goal_pos[0], self.goal_pos[1], marker="o", markersize=4, markeredgecolor="red", markerfacecolor="red")
+        plt.plot(self.start_pos[0], self.start_pos[1], marker="o", markersize=8, markeredgecolor="red", markerfacecolor="red")
+        plt.plot(self.goal_pos[0], self.goal_pos[1], marker="o", markersize=8, markeredgecolor="red", markerfacecolor="red")
         
         # Plot nodes as green dots
         for node in self.nodes:
@@ -563,7 +565,7 @@ if __name__ == "__main__":
     max_iterations = 1000
     max_step_size = 2
     goal_threshold = 0.5
-    n_obstacles = 3
+    n_obstacles = 10
     field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
     robot_radius = 0.2
     turn_radius = 1.37
