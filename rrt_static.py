@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import random
+from TangentCalculator import find_tangent_points
 
 class Node:
     """A node in the RRT tree.
@@ -113,7 +114,7 @@ class RRT:
         - robot_radius: The radius of the robot. (float)
         - plot: A boolean to indicate whether to plot the RRT tree. (bool)"""
 
-    def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_radius, plot):
+    def __init__(self, start_pos, goal_pos, goal_thresh, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_radius, turn_radius, plot):
         self.start_pos = start_pos
         self.goal_pos = goal_pos
         self.goal_thresh = goal_thresh
@@ -122,6 +123,7 @@ class RRT:
         self.max_step_size = max_step_size
         self.n_obstacles = n_obstacles
         self.robot_radius = robot_radius
+        self.turn_radius = turn_radius
         self.plot = plot
 
         self.reached = False
@@ -136,13 +138,13 @@ class RRT:
         """Generate a new start and goal position for the RRT algorithm."""
 
         # Generate a new start position 1 meter to the right of the current start position.
-        new_start_pos = np.array([self.start_pos[0] + 1, self.start_pos[1], self.start_pos[2]])
+        new_start_pos = np.array([self.start_pos[0] + 4, self.start_pos[1], self.start_pos[2]])
         new_start_node = Node(new_start_pos, Node(self.start_pos, None))
         self.nodes = []
         self.nodes.append(new_start_node)
 
         # Generate a new goal position 1 meter down from the current goal position.
-        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - 1, self.goal_pos[2]])
+        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - 4, self.goal_pos[2]])
 
 
     def goal_reached(self, node):
@@ -405,6 +407,29 @@ class RRT:
         self.goal_path = new_goal_path
     
 
+    def add_reeds_shepp_points(self):
+        """Add the points from the Reeds-Shepp path to the goal path"""
+
+        shepp_goal_path = [self.goal_path[0]]
+
+        for i in range(1, len(self.goal_path)-1):
+            p1 = self.goal_path[i-1].position
+            p2 = self.goal_path[i].position
+            p3 = self.goal_path[i+1].position
+            radius = self.turn_radius
+
+            turn_start, turn_end, turn_center = find_tangent_points(p1, p2, p3, radius)
+
+            shepp_goal_path.append(Node(turn_start, shepp_goal_path[-1]))
+            # shepp_goal_path.append(Node(p2, shepp_goal_path[-1]))
+            shepp_goal_path.append(Node(turn_end, shepp_goal_path[-1]))
+        
+        shepp_goal_path.append(Node(self.goal_path[-1].position, shepp_goal_path[-1]))
+
+        self.goal_path = shepp_goal_path
+        
+    
+
     def run_rrt_star(self):
         """Run RRT* algorithm"""
 
@@ -426,6 +451,17 @@ class RRT:
             
             self.rrt_star()
             
+            if self.plot:
+                # Plot graph of nodes and path to goal
+                plot_graph = PlotGraph(nodes=self.nodes, 
+                                       start_pos=self.start_pos, 
+                                       goal_pos=self.goal_pos, 
+                                       obstacles=self.obstacles, 
+                                       goal_path=self.goal_path, 
+                                       field_dimensions=self.field_dimensions)
+                plot_graph.create_graph()
+            
+            self.add_reeds_shepp_points()
             if self.plot:
                 # Plot graph of nodes and path to goal
                 plot_graph = PlotGraph(nodes=self.nodes, 
@@ -514,6 +550,8 @@ class PlotGraph:
             # Plot line between nodes in the path to goal
             source = self.goal_path[i].position
             target = self.goal_path[i+1].position
+            plt.plot(source[0], source[1], marker="o", markersize=4, markerfacecolor="green", markeredgecolor="green")
+            plt.plot(target[0], target[1], marker="o", markersize=4, markerfacecolor="green", markeredgecolor="green")
             plt.plot([source[0], target[0]], [source[1], target[1]], 'b-')
 
 
@@ -523,11 +561,12 @@ if __name__ == "__main__":
     start_pos = np.array([-8, -8, 0])
     goal_pos = np.array([8, 8, 0])
     max_iterations = 1000
-    max_step_size = 0.5
-    goal_threshold = 0.1
-    n_obstacles = 20
+    max_step_size = 2
+    goal_threshold = 0.5
+    n_obstacles = 3
     field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
     robot_radius = 0.2
+    turn_radius = 1.37
     plot = True
 
 
@@ -546,7 +585,9 @@ if __name__ == "__main__":
               max_step_size=max_step_size, 
               n_obstacles=n_obstacles, 
               robot_radius=robot_radius, 
+              turn_radius=turn_radius,
               plot=plot)
+
     rrt.run_rrt_star()
 
     ###
