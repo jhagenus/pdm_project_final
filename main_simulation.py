@@ -5,6 +5,12 @@ import math
 import time
 import threading
 import copy
+<<<<<<< Updated upstream
+=======
+from rrt_static import RRT
+from TangentCalculator import find_tangent_points
+from command_generator import controller
+>>>>>>> Stashed changes
 
 
 class runPrius():
@@ -165,6 +171,7 @@ class runPrius():
 
         action = copy.deepcopy(self.drive_forward)
         ob, _, _, _ = self.env.step(action)
+<<<<<<< Updated upstream
         node_location = self.nodes[self.count]
         node_distance = math.sqrt(node_location[0]**2+node_location[1]**2)
         current_location = math.sqrt(ob['robot_0']['joint_state']['position'][0]**2+ob['robot_0']['joint_state']['position'][1]**2)
@@ -177,6 +184,17 @@ class runPrius():
             current_location = math.sqrt(ob['robot_0']['joint_state']['position'][0]**2+ob['robot_0']['joint_state']['position'][1]**2)
             print("node_distance",node_distance)
             print("current_location",current_location)
+=======
+        desired_distance = self.nodes[self.count]
+        current_dist = 0
+
+        start_loc = [ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1]]
+
+        while(not np.allclose(current_dist,desired_distance, atol=0.01)):
+            ob, _, _, _ = self.env.step(action)
+            current_location = [ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1]]
+            current_dist = math.sqrt((current_location[0]-start_loc[0])**2+(current_location[1]-start_loc[1])**2)
+>>>>>>> Stashed changes
 
 
 
@@ -193,6 +211,7 @@ class runPrius():
                 
 
 if __name__ == "__main__":
+<<<<<<< Updated upstream
     #set of actions return by reeds sheep rrt implementation
     reeds_shepp = ["drive_forward","turn_right","turn_left"]
     node_locations =[np.array([2.0,2.0]),np.array([1.5,0.1]),np.array([0.1,1.1])]
@@ -200,6 +219,74 @@ if __name__ == "__main__":
     AUTO_car = runPrius(actions=reeds_shepp,nodes=node_locations) #initialise the car
 
     #threading example: https://realpython.com/intro-to-python-threading/
+=======
+
+    """
+    first we create a rrt* like path
+    """
+    # Set parameters
+    start_pos = np.array([-8, -8, 0])
+    goal_pos = np.array([8, 8, 0])
+    max_iterations = 1000
+    max_step_size = 3
+    goal_threshold = 0.2
+    n_obstacles = 2
+    field_dimensions = np.array([(-9.9, 9.9), (-9.9, 9.9), (0, 0)])
+    robot_radius = 0.2
+    plot = True
+    render = True
+    radius = 1.37
+
+
+    #generate RRT
+    rrt = RRT(start_pos=start_pos, 
+            goal_pos=goal_pos, 
+            goal_thresh=goal_threshold, 
+            field_dimensions=field_dimensions, 
+            max_iterations=max_iterations, 
+            max_step_size=max_step_size, 
+            n_obstacles=n_obstacles, 
+            robot_radius=robot_radius, 
+            plot=plot)
+
+    # Run the RRT algorithm and terminate if the goal has not been reached
+    reached = rrt.run_rrt_star()
+    if not reached:
+        print("No path found!")
+    
+    # Get the path from start to goal
+    rrt_nodes = [node.position for node in rrt.goal_path]
+
+
+    """
+    interpolate the found nodes so that it can work with reed-shepp paths
+    """
+
+    reed_shepp_nodes = [rrt_nodes[0]] 
+    for i in range(len(rrt_nodes)-2):
+        p1 = rrt_nodes[i+1]
+        p2 = rrt_nodes[i]
+        p3 = rrt_nodes[i+2]
+        node1,node2,center=find_tangent_points(p1,p2,p3,radius)
+        reed_shepp_nodes.append(node1)
+        reed_shepp_nodes.append(node2)
+    reed_shepp_nodes.append(rrt_nodes[-1])
+
+    print(reed_shepp_nodes)
+
+    actions, parameters = controller(reed_shepp_nodes,radius)
+
+    print(actions)
+    print(parameters)
+
+    # #set of actions return by reeds sheep rrt implementation
+    # reeds_shepp = ["turn_right","turn_left"]
+    # node_locations =[np.array([2.0,2.0]),np.array([1.5,0.1])]
+
+    # Run_simulation= runPrius(actions=reeds_shepp,nodes=node_locations) #initialise the car
+
+    # #threading example: https://realpython.com/intro-to-python-threading/
+>>>>>>> Stashed changes
    
 
 
