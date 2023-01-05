@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 def controller(reed_shepp_nodes,radius):
     actions=["drive_forward"]
@@ -10,7 +11,9 @@ def controller(reed_shepp_nodes,radius):
     distance = math.sqrt((node2_location[0]-node1_location[0])**2+(node2_location[1]-node1_location[1])**2)
 
     parameters = [distance]
-    
+
+    turn = True # car always turns, goes straights and turns. exploited by this boolean.
+
     for i in range(len(reed_shepp_nodes)-2):
         first_node = reed_shepp_nodes[i+1] # start node has no influence on action so it is filtered out.
         second_node = reed_shepp_nodes[i+2]
@@ -22,19 +25,19 @@ def controller(reed_shepp_nodes,radius):
 
         distance = math.sqrt((x2-x1)**2+(y2-y1)**2)
 
-        #We find the angle between the two points using the cosine formula:
-        alpha = math.acos((2*(radius**2)-distance**2)/(2*(radius**2)))
-
-        turn = True # car always turns, goes straights and turns. exploited by this boolean.
-
-        
         if turn:
+            #We find the angle between the two points using the cosine formula:
+            domain = (2*(radius**2)-distance**2)/(2*(radius**2))
+
+            alpha = math.acos((2*(radius**2)-distance**2)/(2*(radius**2)))
+            alpha = 180*alpha/(math.pi) # in degrees
+           
             turn = False
             #conditional statement defines all left and right turns, this is a left turn. (intuition: draw xy graph and all possible configurations with first node at 0.0 and 90 degree max turns) 
             if ((x2 > x1) and (y2 > y1)) or ((x2> y1) and (y2 < x1)):
                 actions.append("turn_left")
                 parameters.append(alpha)
-        
+                
             else:
                 actions.append("turn_right")
                 parameters.append(alpha)
