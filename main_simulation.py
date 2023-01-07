@@ -9,7 +9,8 @@ from rrt_static import RRT
 from TangentCalculator import find_tangent_points
 from command_generator import controller
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
-
+from urdfenvs.sensors.lidar import Lidar
+from urdfenvs.sensors.full_sensor import FullSensor
 
 class runPrius():
     def __init__(self,n_steps=1000, render=False, goal=True,actions=[],parameters=[],obstacles=0):
@@ -44,12 +45,16 @@ class runPrius():
         self.turn_right =  np.array([0.0,-1.0])
         self.turn_left =  np.array([0.0,1.0])
 
+        # Add lidar sensor to prius robot Lidar(link_id, amount of rays, length of rays)
+        self.lidar = Lidar(8, nb_rays=4,ray_length=18.0,raw_data=True)
+        self.env.add_sensor(self.lidar, robot_ids=[0])
+        
         self.Switch = False
 
         x = threading.Thread(target=self.switcher) # initialise a thread
         x.start() # start the thread
 
-        self.DEFAULT()
+        self.DEFAULT()        
     
     def generate_obstacles(self):
         """Generates the obstacles in the environment."""
@@ -90,6 +95,7 @@ class runPrius():
                     self.Forward()
             else:
                 self.ready = True
+            
          
     def TURN_LEFT(self):
         # due to realllly stupid python behaivor indexing and changing the value of action will change the acctual self.turn_right array. PLEASE GIVE ME C++ BACK :(
@@ -139,9 +145,9 @@ class runPrius():
                 break
             
 
-            print("current orientation: ",currentOrientation)
-            print("desired orientation: ",InitialOrientation + angle)
-            print("")
+            # print("current orientation: ",currentOrientation)
+            # print("desired orientation: ",InitialOrientation + angle)
+            # print("")
 
 
     def TURN_RIGHT(self):
@@ -167,8 +173,6 @@ class runPrius():
             currentSteerAngle = ob['robot_0']['joint_state']['steering']
             Continue = True
             ob, _, _, _ = self.env.step(action) #update the environment with the action
-
-        
             
             #when the wheels are fully turned stop turning the wheels and start moving the car (needs to be this way because otherwise we cannot connect this to reeds shepp)
             if  abs(currentSteerAngle[0]) >= self.max_steer and NEXT:
@@ -191,9 +195,9 @@ class runPrius():
                 NEXT3 = False
                 break
 
-            print("current orientation: ",currentOrientation)
-            print("desired orientation: ",InitialOrientation - angle)
-            print("")
+            # print("current orientation: ",currentOrientation)
+            # print("desired orientation: ",InitialOrientation - angle)
+            # print("")
 
     def Forward(self):
         # find the node location by indexing at self.count (which contains the index of the current action)
@@ -213,9 +217,13 @@ class runPrius():
             current_location = [ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1]]
             current_dist = math.sqrt((current_location[0]-start_loc[0])**2+(current_location[1]-start_loc[1])**2)
 
-            print("current_dist: ",current_dist)
-            print("desired_distance: ",desired_distance)
-            print("")
+            # print("current_dist: ",current_dist)
+            # print("desired_distance: ",desired_distance)
+            # print("")
+
+            test = self.lidar._distances
+            print("test",test)
+
 
 
 
@@ -242,7 +250,7 @@ if __name__ == "__main__":
     max_iterations = 1000
     max_step_size = 2
     goal_threshold = 0.5
-    n_obstacles = 2
+    n_obstacles = 20
     field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
     robot_radius = 0.2
     turn_radius = 1.37
