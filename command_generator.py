@@ -15,13 +15,20 @@ def controller(reed_shepp_nodes,radius):
     turn = True # car always turns, goes straights and turns. exploited by this boolean.
 
     for i in range(len(reed_shepp_nodes)-2):
+        reference_node = reed_shepp_nodes[i] # reference node is the node that the car is currently at.
         first_node = reed_shepp_nodes[i+1] # start node has no influence on action so it is filtered out.
         second_node = reed_shepp_nodes[i+2]
 
+        x0 = reference_node[0]
+        y0 = reference_node[1]
         x1 = first_node[0]
         y1 = first_node[1]
         x2 = second_node[0]
         y2 = second_node[1]
+
+        position = np.sign((x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0))
+
+        print(position)
 
         distance = math.sqrt((x2-x1)**2+(y2-y1)**2)
 
@@ -34,7 +41,11 @@ def controller(reed_shepp_nodes,radius):
            
             turn = False
             #conditional statement defines all left and right turns, this is a left turn. (intuition: draw xy graph and all possible configurations with first node at 0.0 and 90 degree max turns) 
-            if ((x2 > x1) and (y2 > y1)) or ((x2> y1) and (y2 < x1)):
+            # if ((x2 > x1) and (y2 > y1)) or ((x2> x1) and (y2 < y1)):
+            #     actions.append("turn_left")
+            #     parameters.append(alpha)
+                
+            if (position == 1):
                 actions.append("turn_left")
                 parameters.append(alpha)
                 
