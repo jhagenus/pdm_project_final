@@ -3,41 +3,44 @@ import threading
 import time
 import copy
 import math
-import gym
+import sys
+
+# sys.path.append("../../../gym_envs_urdf")
 
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
 from urdfenvs.robots.prius import Prius
 
 # make sure the folder utils can be located
-import sys
 sys.path.append('../pdm_project_final')
 
 from utils.vehicle_controller import controller
+from utils.environment import Environment
 from rrt_static import RRT_Static
 
 
 class runPrius():
+    """Class which implements the Prius robot using the gym environment
+    and the bicycle model.
+        - rrt: The RRT object used to generate the path.
+        - actions: The actions that the robot should take.
+        - parameters: The parameters used to generate the path."""
 
-    # Class constructor
     def __init__(self, rrt, actions=[], parameters=[]):
-        starting_position_x, starting_position_y, starting_position_z  = rrt.start_pos
-        starting_orientation = rrt.start_orientation
+        self.parameters      = parameters
         self.actions         = actions
         self.ready           = False
         self.update          = False
         self.max_steer       = 0.9
         self.count           = -1
-        self.parameters      = parameters
         self.obstacles       = rrt.obstacles
 
         # Implement the Prius Robot using the Bicycle model and create our gym environment
         robots = [Prius(mode="vel")]
         
         #initialise the environment
-        self.env = gym.make("urdf-env-v0", dt=0.01, robots=robots, render=True)
-        starting_position = np.array([starting_position_x, starting_position_y, starting_orientation])
-        ob = self.env.reset(pos=starting_position)
-        self.generate_obstacles()
+        start_pose = rrt.start_pos
+        start_pose[2] = rrt.start_orientation
+        self.env = Environment(rrt.field_dimensions, rrt.obstacles, robots, start_pose).env
 
         # Define discrete action inputs for our car controller: action = [forward_velocity, angular_velocity]
         # the actions are discretized in order to respect the kinematic constraints implemented in the bicycle model
@@ -54,28 +57,11 @@ class runPrius():
 
         #A finite state machine is implemented using this class with the first state being default.
         self.DEFAULT()        
-    
-    
-    def generate_obstacles(self):
-        """Function which generates the obstacle for the gym """
-        """environment using randomly initialized positions. """
-           
-        for obstacle in self.obstacles:
-            radius = float(obstacle.radius)
-            position = [obstacle.position[0],obstacle.position[1], radius]
-            position = np.array(position, dtype=float).tolist()
 
-            # Create the obstacle dictionary with the position and radius and add it to the environment
-            obs_dict = {
-                "type": "sphere",
-                'movable': obstacle.movable,
-                "geometry": {"position": position, "radius": radius},
-                }
-            sphereObst = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
-            self.env.add_obstacle(sphereObst)
 
     def DEFAULT(self):
         """Default car action used to stop the vehicle in position"""
+
         action = copy.deepcopy(self.stop)
         while(True):
             ob, _, _, _ = self.env.step(action)
@@ -96,18 +82,18 @@ class runPrius():
                 next_action = self.actions[self.count]
                 print("next action is: ",next_action)
                 if next_action == "turn_right":
-                    self.TURN_RIGHT()
+                    self.Turn_right()
                 elif next_action == "turn_left":
-                    self.TURN_LEFT()
+                    self.Turn_left()
                 elif next_action == "drive_forward":
                     self.Forward()
             else:
                 self.ready = True
             
          
-    def TURN_LEFT(self):
-        """Discretized action to turn the car to the left"""
-        """with a steering angle ranging from 0 to 180 degrees"""
+    def Turn_left(self):
+        """Discretized action to turn the car to the left with a steering angle ranging from 0 to 180 degrees"""
+
         action = copy.deepcopy(self.turn_left)
         # Boolean flags used for a finite state machine
         NEXT = True
@@ -162,7 +148,7 @@ class runPrius():
 
 
 
-    def TURN_RIGHT(self):
+    def Turn_right(self):
         """Discretized action to turn the car to the right"""
         """with a steering angle ranging from 0 to 180 degrees"""
         

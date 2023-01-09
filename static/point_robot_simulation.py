@@ -67,7 +67,7 @@ def move_robot(path_to_follow, env):
             deviation_check_x = deviation_x
     
 
-def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_step_size, goal_threshold, n_obstacles, robot_width, turn_radius, plot=False, render=False):
+def run_point_robot(rrt):
     """Runs the point robot in the environment.
         - start_pos: The starting position of the robot. (x, y, z)
         - goal_pos: The goal position of the robot. (x, y, z)
@@ -85,14 +85,14 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
         GenericUrdfReacher(urdf="pointRobot.urdf", mode="vel"),
     ]    
     
-    rrt = RRT_Static(goal_pos           = goal_pos, 
-                     goal_threshold     = goal_threshold, 
-                     field_dimensions   = field_dimensions, 
-                     max_iterations     = max_iterations, 
-                     max_step_size      = max_step_size, 
-                     n_obstacles        = n_obstacles, 
-                     robot_width        = robot_width, 
-                     turn_radius        = turn_radius)
+    # rrt = RRT_Static(goal_pos           = goal_pos, 
+    #                  goal_threshold     = goal_threshold, 
+    #                  field_dimensions   = field_dimensions, 
+    #                  max_iterations     = max_iterations, 
+    #                  max_step_size      = max_step_size, 
+    #                  n_obstacles        = n_obstacles, 
+    #                  robot_width        = robot_width, 
+    #                  turn_radius        = turn_radius)
 
     # Run the RRT algorithm and terminate if the goal has not been reached
     rrt.run_rrt(dubins=False)
@@ -101,11 +101,10 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
     path_to_follow = [node.position for node in rrt.goal_path]
 
     # Create the environment
-    env = Environment(field_dimensions = field_dimensions, 
+    env = Environment(field_dimensions = rrt.field_dimensions, 
                       obstacles        = rrt.obstacles, 
                       robots           = robots, 
-                      render           = render, 
-                      start_pos        = start_pos)
+                      start_pose       = rrt.start_pos)
 
     # Move the robot along the path
     move_robot(path_to_follow, env.env)
@@ -120,7 +119,7 @@ if __name__ == "__main__":
     goal_threshold      = 0.5
     n_obstacles         = 10
     field_dimensions    = np.array([(-9, 9), (-9, 9), (0, 0)])
-    robot_width         = 1
+    robot_width         = 0.4
     turn_radius         = 1.37
     plot                = True
 
@@ -133,3 +132,7 @@ if __name__ == "__main__":
                      n_obstacles       = n_obstacles, 
                      robot_width       = robot_width, 
                      turn_radius       = turn_radius)
+    
+    run_point_robot(rrt)
+    
+
