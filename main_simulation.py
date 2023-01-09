@@ -154,7 +154,7 @@ class runPrius():
         action = copy.deepcopy(self.turn_right)
         #boolean flags used for finite state machine
         NEXT = True
-        NEXT2 = True
+        NEXT2 = False
         NEXT3 = False
         Special_Case = False
 
@@ -171,7 +171,6 @@ class runPrius():
             #current Orientation measures how far the robot currently is, currentSteerAngle does the same but for steering angle
             currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) +180 # again normalised
             currentSteerAngle = ob['robot_0']['joint_state']['steering']
-            Continue = True
             ob, _, _, _ = self.env.step(action) #update the environment with the action
             
             #when the wheels are fully turned stop turning the wheels and start moving the car (needs to be this way because otherwise we cannot connect this to reeds shepp)
@@ -179,25 +178,30 @@ class runPrius():
                 action[1] = 0
                 action[0] = 1.0
                 NEXT = False
+                NEXT2 = True
 
             #if you have reached your orientation move your wheels back to a neutral position
-            if np.allclose(currentOrientation - angle , InitialOrientation,atol=0.8)  and NEXT2 and not Special_Case:
+            if np.allclose(InitialOrientation - angle, currentOrientation,atol=0.8)  and NEXT2 and not Special_Case:
                 action = copy.deepcopy(self.turn_left)
+                NEXT2 = False
                 NEXT3 = True
               
-            if Special_Case and NEXT2 and np.allclose(currentOrientation , 360 - angle,atol=0.8) and currentOrientation <= 360:
+            if Special_Case and NEXT2 and np.allclose(currentOrientation , (360 - angle),atol=0.8) and currentOrientation <= 360:
                 action = copy.deepcopy(self.turn_left)
+                NEXT2 = False
                 NEXT3 = True
                 
             #if your wheels have reach a neutral position ~0 degrees relative to car go to DEFAULT function and await next order of controller.
             if np.allclose(currentSteerAngle,0,atol=0.01) and NEXT3:
-                NEXT2 = False
                 NEXT3 = False
                 break
-
+            
+            # print("special case:        ",Special_Case)
             # print("current orientation: ",currentOrientation)
             # print("desired orientation: ",InitialOrientation - angle)
+            # print("3 consecutive checks: ",np.allclose((currentOrientation - angle ), InitialOrientation,atol=0.8), NEXT2 ,not Special_Case)
             # print("")
+            
 
     def Forward(self):
         # find the node location by indexing at self.count (which contains the index of the current action)
@@ -222,7 +226,7 @@ class runPrius():
             # print("")
 
             test = self.lidar._distances
-            print("test",test)
+   
 
 
 
