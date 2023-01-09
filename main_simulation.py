@@ -240,21 +240,26 @@ class runPrius():
                 self.ready = False
             else:
                 time.sleep(0.05)
+                #print("thread still running")
+
                 
 
 if __name__ == "__main__":
-    
-    # Set path planning and simualation parameters
-    start_pos        = np.array([-8, -8, 0])
-    goal_pos         = np.array([8, 8, 0])
-    max_iterations   = 1000
-    max_step_size    = 2
-    goal_threshold   = 0.5
-    n_obstacles      = 3
+
+    """
+    first we create a rrt* like path
+    """
+     # Set parameters
+    start_pos = np.array([-8, -8, 0])
+    goal_pos = np.array([8, 8, 0])
+    max_iterations = 1000
+    max_step_size = 2
+    goal_threshold = 0.5
+    n_obstacles = 10
     field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
-    robot_radius     = 0.2
-    turn_radius      = 1.37
-    plot             = True
+    robot_radius = 0.5
+    turn_radius = 1.37
+    plot = True
 
     #generate RRT
     rrt = RRT(start_pos         = start_pos, 
