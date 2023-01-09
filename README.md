@@ -7,7 +7,7 @@
 - J. Hagenus        - 5099528
 - D.J. Scherrenburg - 5175151
 
-**Contents**
+### Table of Contents
 - [Setup](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup)
   - [Setup of the gym environment](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-gym-environment)
   - [Setup of the project](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-project)
