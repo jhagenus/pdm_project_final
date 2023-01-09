@@ -42,7 +42,7 @@ git clone git@github.com:jhagenus/pdm_project_final.git
 ## Running the simulation
 To execute the simulation, run the following commands in the poetry shell:
 ```
-cd ~/gym_envs_urdf/pdm_final_project/
+cd ~/gym_envs_urdf/pdm_project_final/
 python3 ./static/vehicle_simulation.py
 ```
 
