@@ -20,7 +20,6 @@ class Environment:
         # Create the environment, add the walls and obstacles
         self.env = gym.make("urdf-env-v0", robots=robots, render=True)
         self.env.reset(pos=start_pose)
-        self.env.add_walls()
         self.generate_obstacles()
 
     

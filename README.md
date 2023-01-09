@@ -7,7 +7,7 @@
 - J. Hagenus        - 5099528
 - D.J. Scherrenburg - 5175151
 
-**Contents**\
+**Contents**
 - [Setup](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup)
   - [Setup of the gym environment](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-gym-environment)
   - [Setup of the project](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-project)
@@ -28,21 +28,21 @@ pip3 install .
 cd ~/gym_envs_urdf
 poetry install
 poetry shell
-pip install motion-planning-scenes
-pip install --force-reinstall numpy==1.19.5
 ```
 
 ### Setup of the project
 The project can be installed by running the following command in the root directory of the project:
 ```
 cd ~/gym_envs_urdf
-git clone https://github.com/jhagenus/pdm_project_final.git
+pip install motion-planning-scenes
+pip install --force-reinstall numpy==1.19.5
+git clone git@github.com:jhagenus/pdm_project_final.git
 ```
 
 ## Running the simulation
 To execute the simulation, run the following commands in the poetry shell:
 ```
-cd ~/gym_envs_urdf/pdm_final_project
+cd ~/gym_envs_urdf/pdm_final_project/
 python3 ./static/vehicle_simulation.py
 ```
 
