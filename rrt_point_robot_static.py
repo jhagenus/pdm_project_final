@@ -136,9 +136,9 @@ def run_point_robot(start_pos, goal_pos, field_dimensions, max_iterations, max_s
               plot=plot)
 
     # Run the RRT algorithm and terminate if the goal has not been reached
-    reached = rrt.run_rrt_star()
-    if not reached:
-        return
+    reached = False
+    while not reached:
+        reached = rrt.run_rrt_star()
     
     # Get the path from start to goal
     path_to_follow = [node.position for node in rrt.goal_path]

@@ -131,22 +131,32 @@ class RRT:
         self.obstacles = []
         self.goal_path = []
 
-        self.new_start_and_goal()
+        self.generate_start_and_goal_path()
+
     
+    def generate_start_and_goal_path(self):
+        """Generate a start and goal path for the RRT algorithm."""
 
-    def new_start_and_goal(self):
-        """Generate a new start and goal position for the RRT algorithm."""
+        # Generate a random start position.
+        x = np.random.uniform(self.field_dimensions[0][0], 0)
+        y = np.random.uniform(self.field_dimensions[1][0], 0)
+        z = np.random.uniform(self.field_dimensions[2][0], self.field_dimensions[2][1])
+        self.start_pos = np.array([x, y, z])
 
-        offset = 2
+        self.offset = 2
 
-        # Generate a new start position 1 meter to the right of the current start position.
-        new_start_pos = np.array([self.start_pos[0] + offset, self.start_pos[1], self.start_pos[2]])
+        # Generate a point with an offset from the start position depending on a random orientation.
+        theta = np.random.uniform(0, 0.5*np.pi)
+        x = self.start_pos[0] + self.offset * np.cos(theta)
+        y = self.start_pos[1] + self.offset * np.sin(theta)
+        z = self.start_pos[2]
+        new_start_pos = np.array([x, y, z])
         new_start_node = Node(new_start_pos, Node(self.start_pos, None))
         self.nodes = []
         self.nodes.append(new_start_node)
 
-        # Generate a new goal position 1 meter down from the current goal position.
-        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - offset, self.goal_pos[2]])
+        # Generate a parking position in front of the parking_space.
+        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - self.offset, self.goal_pos[2]])
 
 
     def goal_reached(self, node):
@@ -193,8 +203,12 @@ class RRT:
         if not (bottom_check and top_check and left_check and right_check):
             return False
         
-        # Check if circle is created on start or goal position.
-        if circle.point_collision(self.start_pos) or circle.point_collision(self.goal_pos):
+        # Check if circle is created inside a radius around the start or goal position.
+        safety_radius = self.offset + self.robot_radius + 0.5
+        start_dist = distance(circle.position, self.start_pos)
+        parking_dist = distance(circle.position, self.parking_pos)
+        goal_dist = distance(circle.position, self.goal_pos)
+        if (start_dist < safety_radius + circle.radius) or (parking_dist < safety_radius + circle.radius) or (goal_dist < safety_radius + circle.radius):
             return False
 
         # Check if the circle is inside another circle.
@@ -235,6 +249,26 @@ class RRT:
                 # Add circle to list of obstacles
                 self.obstacles.append(circle)
                 break
+
+    
+    def create_parking_space(self):
+        """Create a parking space with spheres"""
+
+        sphere_positions = []
+        radius = .5
+
+        for i in range(3):
+            sphere_positions.append([self.goal_pos[0]-2*radius, self.goal_pos[1]-radius+i*(2*radius), 0])
+
+        for i in range(3):
+            sphere_positions.append([self.goal_pos[0]+2*radius, self.goal_pos[1]-radius+i*(2*radius), 0])
+
+        sphere_positions.append([self.goal_pos[0], self.goal_pos[1] + 3*radius, 0])
+
+        for position in sphere_positions:
+            circle = Circle(position, radius, self.robot_radius)
+            self.obstacles.append(circle)
+
     
     def random_position(self):
         """Generate a random position within the field dimensions"""
@@ -320,6 +354,7 @@ class RRT:
         """Create a RRT."""
 
         # Creating circles for the obstacles in the environment
+        self.create_parking_space()
         self.create_circles()
 
         # While loop to create the RRT until the goal is reached or the maximum number of iterations is reached
@@ -504,7 +539,7 @@ class PlotGraph:
         """Create graph of nodes and path to goal"""
 
         # set plot parameters
-        plt.rcParams["figure.figsize"] = [10.00, 10.00]
+        plt.rcParams["figure.figsize"] = [10.1, 10.1]
         plt.rcParams["figure.autolayout"] = True
         plt.xlim(self.field_dimensions[0][0], self.field_dimensions[0][1])
         plt.ylim(self.field_dimensions[1][0], self.field_dimensions[1][1])
@@ -566,8 +601,8 @@ if __name__ == "__main__":
     max_step_size = 2
     goal_threshold = 0.5
     n_obstacles = 10
-    field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
-    robot_radius = 0.2
+    field_dimensions = np.array([(-11, 11), (-11, 11), (0, 0)])
+    robot_radius = 0.5
     turn_radius = 1.37
     plot = True
 

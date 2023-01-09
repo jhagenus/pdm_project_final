@@ -56,6 +56,7 @@ class runPrius():
 
         self.DEFAULT()        
     
+
     def generate_obstacles(self):
         """Generates the obstacles in the environment."""
 
@@ -229,8 +230,6 @@ class runPrius():
    
 
 
-
-
     def switcher(self):
         while(True):
             if self.ready:
@@ -240,7 +239,6 @@ class runPrius():
                 time.sleep(0.05)
                 #print("thread still running")
 
-                
                 
 
 if __name__ == "__main__":
@@ -254,9 +252,9 @@ if __name__ == "__main__":
     max_iterations = 1000
     max_step_size = 2
     goal_threshold = 0.5
-    n_obstacles = 20
+    n_obstacles = 10
     field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
-    robot_radius = 0.2
+    robot_radius = 0.5
     turn_radius = 1.37
     plot = True
 
@@ -293,7 +291,7 @@ if __name__ == "__main__":
         #     reed_shepp_nodes.append(node2)
         # reed_shepp_nodes.append(rrt_nodes[-1])
 
-    
+
         #set of actions and correcponding parameters (distance or angle) for car to follow
         actions, parameters = controller(reed_shepp_nodes,turn_radius)
 
@@ -303,13 +301,7 @@ if __name__ == "__main__":
         #                   robots=robots, 
         #                   render=render, 
         #                   start_pos=start_pos)
-        
+
         Run_simulation= runPrius(actions=actions,parameters=parameters,obstacles=rrt.obstacles) #initialise the car
 
         # #threading example: https://realpython.com/intro-to-python-threading/
-    
-
-
-
-    
-
