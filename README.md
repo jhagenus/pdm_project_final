@@ -8,7 +8,11 @@
 - D.J. Scherrenburg - 5175151
 
 **Contents**\
-[[_TOC_]]
+- [Setup](https://github.com/jhagenus/pdm_project_final/edit/main/README.md#setup)
+  - [Setup of the gym environment](https://github.com/jhagenus/pdm_project_final/edit/main/README.md#setup-of-the-gym-environment)
+  - [Setup of the project](https://github.com/jhagenus/pdm_project_final/edit/main/README.md#setup-of-the-project)
+- [Text](link)
+
 
 ## Setup
 The following sectors will describe the steps needed for the setup of the environment. 
@@ -35,4 +39,10 @@ cd ~/gym_envs_urdf
 git clone https://github.com/jhagenus/pdm_project_final.git
 ```
 
+## Running the simulation
+To execute the simulation, run the following commands in the poetry shell:
+```
+cd ~/gym_envs_urdf/pdm_final_project
+python3 ./static/vehicle_simulation.py
+```
 
