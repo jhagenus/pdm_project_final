@@ -65,7 +65,7 @@ class runPrius():
             # Create the obstacle dictionary with the position and radius and add it to the environment
             obs_dict = {
                 "type": "sphere",
-                'movable': True,
+                'movable': obstacle.movable,
                 "geometry": {"position": position, "radius": radius},
                 }
             sphereObst = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
