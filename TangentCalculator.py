@@ -4,77 +4,57 @@ import matplotlib.pyplot as plt
 
 
 def distance(p1, p2):
+    """ Compute Euclidean distance between two points"""
     return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
   
 
-def dot(vA, vB):
-    return vA[0]*vB[0]+vA[1]*vB[1]
+def dot_product(vA, vB):
+    """ Compute the dot product between two vectors"""
+    return np.dot(vA, vB) #vA[0]*vB[0]+vA[1]*vB[1]
 
 
-def ang(p1, p2, p3):
-    # Get nicer vector form
+def angle_between_lines(p1, p2, p3):
+    """ Compute the angle between two lines originating """
+    """ in point 1, point 3 intersecting in point 2     """
+    # Obtain vectorial form of the two lines
     vA = [(p1[0]-p2[0]), (p1[1]-p2[1])]
     vB = [(p3[0]-p2[0]), (p3[1]-p2[1])]
-    # Get dot prod
-    dot_prod = dot(vA, vB)
-    # Get magnitudes
-    magA = dot(vA, vA)**0.5
-    magB = dot(vB, vB)**0.5
-    # Get angle in radians
-    angle = math.acos(dot_prod/magB/magA)
+    
+    # Compute the dot product between the two vectors
+    dot_prod = dot_product(vA, vB)
+    
+    # Compute the magnitude of the two vectors respectively
+    magnitude_A = dot_product(vA, vA)**0.5
+    magnitude_B = dot_product(vB, vB)**0.5
+    
+    # Compute the angle between two vectors in radians
+    angle = math.acos(dot_prod/magnitude_B/magnitude_A)
 
     return angle
 
 
 def find_tangent_points(p1, p2, p3, radius):
-  """Find the tangent points between a circle and 2 lines."""
+  """ Implementation of the Tangent Tanget intersection theorem"""
   
-  # Calculate the direction of the lines
-  A_dirn = (p1-p2)/distance(p1,p2)
-  B_dirn = (p3-p2)/distance(p3,p2)
-  circle_center_dirn = (A_dirn + B_dirn)/2
+  # Determine the direction of the two intersecting lines and the midpoint line running through the circle center
+  direction_A = (p1-p2)/distance(p1,p2)
+  direction_B = (p3-p2)/distance(p3,p2)
+  circle_center_dirn = (direction_A + direction_B)/2
 
-  # Calculate the angle between the lines
-  angle = ang(p1, p2, p3)
+  # Compute the angle between the two lines
+  angle = angle_between_lines(p1, p2, p3)
 
+  # Divide the angle by two to obtain angle between line through circle center and either of the two tangent lines
   alpha = angle / 2
-  dist_circle_center = radius / np.sin(alpha)   # Distance from p2 to circle center
-  dist_circle_intersection = dist_circle_center * np.cos(alpha)  # Distance from p2 to circle intersection
+  distance_to_circle_center = radius / np.sin(alpha)   # Distance from p2 to circle center
+  distance_to_circle_intersection = distance_to_circle_center * np.cos(alpha)  # Distance from p2 to circle intersection
 
   # Calculate the tangent points on the circle and the circle center
-  A = p2 + dist_circle_intersection * A_dirn
-  B = p2 + dist_circle_intersection * B_dirn
-  circle_center = p2 + dist_circle_center * circle_center_dirn
+  A = p2 + distance_to_circle_intersection * direction_A
+  B = p2 + distance_to_circle_intersection * direction_B
+  circle_center = p2 + distance_to_circle_center * circle_center_dirn
 
   A = np.append(A, 0)
   B = np.append(B, 0)
 
   return A, B, circle_center
-
-
-# # These are our nodes or in this case manually appointed coordinates
-# pa = np.array([10,4])
-# pb = np.array([0,0])
-# pc = np.array([5,-2])
-
-# position_A, position_B, center = find_tangent_points(pa, pb, pc, 1.37)
-# print(center)
-# print(position_A)
-
-
-# # Visualize some results
-# line1x = [pa[0],pb[0]]
-# line1y = [pa[1],pb[1]]
-
-# line2x = [pb[0],pc[0]]
-# line2y = [pb[1],pc[1]]
-
-# plt.plot(line1x,line1y)
-# plt.plot(line2x,line2y)
-
-# plt.plot(position_A[0], position_A[1], marker="o", color="blue")
-# plt.plot(position_B[0], position_B[1], marker="o", color="blue")
-
-# circle = plt.Circle(center[:2], 1.37, color='g', clip_on=False)
-# plt.gca().add_patch(circle)
-# plt.show()

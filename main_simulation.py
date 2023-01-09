@@ -1,65 +1,63 @@
-import gym
-from urdfenvs.robots.prius import Prius
-import numpy as np
-import math
-import time
-import threading
-import copy
-from rrt_static import RRT
-from TangentCalculator import find_tangent_points
-from command_generator import controller
+# Import package dependencies
+
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
-from urdfenvs.sensors.lidar import Lidar
-from urdfenvs.sensors.full_sensor import FullSensor
+from command_generator import controller
+from urdfenvs.robots.prius import Prius
+from rrt_static import RRT
+import numpy as np
+import threading
+import time
+import copy
+import math
+import gym
+
 
 class runPrius():
-    def __init__(self,n_steps=1000, render=False, goal=True,actions=[],parameters=[],obstacles=0):
-        pos_x = -8
-        pos_y = -8
-        angle = 0
-        self.actions = actions
-        self.ready = False
-        self.update = False
-        self.max_steer = 0.9
-        self.count = -1
-        self.parameters = parameters
-        self.obstacles = obstacles
 
-        pos0 = np.array([pos_x, pos_y, angle*(math.pi/180)])
+    # Class constructor
+    def __init__(self, actions=[],parameters=[],obstacles=0):
+        starting_position_x  = -8
+        starting_position_y  = -8
+        starting_orientation = 0
+        self.actions         = actions
+        self.ready           = False
+        self.update          = False
+        self.max_steer       = 0.9
+        self.count           = -1
+        self.parameters      = parameters
+        self.obstacles       = obstacles
 
-        robots = [
-            Prius(mode="vel"),
-        ]
+        # Implement the Prius Robot using the Bicycle model and create our gym environment
+        robots = [Prius(mode="vel")]
         
-        self.env = gym.make(
-            "urdf-env-v0",
-            dt=0.01, robots=robots, render=True
-            )
-
-        ob = self.env.reset(pos=pos0)
+        #initialise the environment
+        self.env = gym.make("urdf-env-v0", dt=0.01, robots=robots, render=True)
+        starting_position = np.array([starting_position_x, starting_position_y, starting_orientation*(math.pi/180)])
+        ob = self.env.reset(pos=starting_position)
         self.generate_obstacles()
 
-        self.drive_forward = np.array([1.0, 0.])
-        self.drive_backward = np.array([-1.0, 0.])
-        self.stop = np.array([0.,0.])
-        self.turn_right =  np.array([0.0,-1.0])
-        self.turn_left =  np.array([0.0,1.0])
-
-        # Add lidar sensor to prius robot Lidar(link_id, amount of rays, length of rays)
-        self.lidar = Lidar(8, nb_rays=4,ray_length=18.0,raw_data=True)
-        self.env.add_sensor(self.lidar, robot_ids=[0])
+        # Define discrete action inputs for our car controller: action = [forward_velocity, angular_velocity]
+        # the actions are discretized in order to respect the kinematic constraints implemented in the bicycle model
+        self.drive_forward  = np.array([1.0, 0.])
+        self.stop           = np.array([0.0,0.0])
+        self.turn_right     = np.array([0.0,-1.0])
+        self.turn_left      = np.array([0.0,1.0])
         
+        # Boolean flag to switch between threads, python uses single thread by default. In this code multithreading was
+        # implemented to switch between processes. 
         self.Switch = False
-
         x = threading.Thread(target=self.switcher) # initialise a thread
         x.start() # start the thread
 
+
+        #A finite state machine is implemented using this class with the first state being default.
         self.DEFAULT()        
     
-
+    
     def generate_obstacles(self):
-        """Generates the obstacles in the environment."""
-
+        """Function which generates the obstacle for the gym """
+        """environment using randomly initialized positions. """
+           
         for obstacle in self.obstacles:
             radius = float(obstacle.radius)
             position = [obstacle.position[0],obstacle.position[1], radius]
@@ -75,17 +73,24 @@ class runPrius():
             self.env.add_obstacle(sphereObst)
 
     def DEFAULT(self):
+        """Default car action used to stop the vehicle in position"""
         action = copy.deepcopy(self.stop)
         while(True):
             ob, _, _, _ = self.env.step(action)
+
+            # Here we check if the car has finished its command using the self.update boolean. 
+            # This boolean is set using the switcher function where we use multitreadhing as a way
+            # to switch between states in the finite state machine (it acts like a serivice interrupt routine)
             if self.update:
                 self.update = False
                 self.count += 1
-
+                
+                #if the last action in the list has been reached we have finished the track and finished the course
                 if self.count  == len(self.actions):
                     print("GOAL REACHED")
                     break
                 
+                #we look through the list with actions to determine if we should turn in a direction or move straight
                 next_action = self.actions[self.count]
                 print("next action is: ",next_action)
                 if next_action == "turn_right":
@@ -99,59 +104,66 @@ class runPrius():
             
          
     def TURN_LEFT(self):
-        # due to realllly stupid python behaivor indexing and changing the value of action will change the acctual self.turn_right array. PLEASE GIVE ME C++ BACK :(
+        """Discretized action to turn the car to the left"""
+        """with a steering angle ranging from 0 to 180 degrees"""
         action = copy.deepcopy(self.turn_left)
-        #boolean flags used for finite state machine
+        # Boolean flags used for a finite state machine
         NEXT = True
         NEXT2 = True
         NEXT3 = False
         Special_Case = False
 
+        # Look up the angle the car needs to turn to reach the next node 
         angle = self.parameters[self.count]
 
-        #we get the initial orientation of the robot
+        # Get the initial state of the robot
         ob, _, _, _ = self.env.step(action)
-        InitialOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) + 180 # orientation goes from -180 to 180. we normalise values here
+
+        # The orientation goes from -180 to 180, these values are normalised to 0 to 360 degrees
+        InitialOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) + 180 
+
+        # In the case that the steering of the robot will turn it past the 360/0 degree point a 
+        # special care needs to be given to define how the robot needs to turn
         if InitialOrientation +angle >= 360:
             Special_Case = True
 
-        #env.step(action) needs to be in a while loop otherwise the environment will end
         while(True):
             
-            #current Orientation measures how far the robot currently is, currentSteerAngle does the same but for steering angle
-            currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) +180 # again normalised
+            # Current Orientation measures how far the robot currently is, currentSteerAngle does the same but for steering angle
+            currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) +180 
             currentSteerAngle = ob['robot_0']['joint_state']['steering']
-            ob, _, _, _ = self.env.step(action) #update the environment with the action
+            ob, _, _, _ = self.env.step(action) 
 
-            #when the wheels are fully turned stop turning the wheels and start moving the car (needs to be this way because otherwise we cannot connect this to reeds shepp)
+            # Action gets updated to stop turning the wheels when the wheels have reached the maximum steering angle
+            # and to start moving the car
             if  currentSteerAngle > self.max_steer and NEXT:
                 action[1] = 0
                 action[0] = 1.0
                 NEXT = False
 
-            #if you have reached your orientation move your wheels back to a neutral position
+            # As soon as the car has reached its correct orrientation the wheels can turn back to 0 degrees relative to the car
             if np.allclose(currentOrientation , InitialOrientation + angle,atol=0.8) and NEXT2 and not Special_Case:
                 action = copy.deepcopy(self.turn_right)
                 NEXT3 = True
 
+            # Special case mentioned earlier
             if NEXT2 and Special_Case and np.allclose(currentOrientation +360,angle,atol=0.8):
                 action = copy.deepcopy(self.turn_right)
                 NEXT3 = True
                 
 
-            #if your wheels have reach a neutral position ~0 degrees relative to car go to DEFAULT function and await next order of controller.
+            # If your wheels have reach a neutral position ~0 degrees relative to car go to DEFAULT function and await next order of controller.
             if np.allclose(currentSteerAngle,0,atol=0.01) and NEXT3:
                 NEXT2 = False
                 NEXT3 = False
                 break
-            
 
-            # print("current orientation: ",currentOrientation)
-            # print("desired orientation: ",InitialOrientation + angle)
-            # print("")
 
 
     def TURN_RIGHT(self):
+        """Discretized action to turn the car to the right"""
+        """with a steering angle ranging from 0 to 180 degrees"""
+        
         action = copy.deepcopy(self.turn_right)
         #boolean flags used for finite state machine
         NEXT = True
@@ -161,27 +173,28 @@ class runPrius():
 
         angle = self.parameters[self.count]
 
-        #we get the initial orientation of the robot
+        # The orientation goes from -180 to 180, these values are normalised to 0 to 360 degrees
         ob, _, _, _ = self.env.step(action)
         InitialOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) + 180 # orientation goes from -180 to 180. we normalise values here
         if InitialOrientation -angle <= 90 and InitialOrientation -angle > 0 :
             Special_Case = True
-        #env.step(action) needs to be in a while loop otherwise the environment will end
+
         while(True):
 
-            #current Orientation measures how far the robot currently is, currentSteerAngle does the same but for steering angle
+            # Current Orientation measures how far the robot currently is, currentSteerAngle does the same but for steering angle
             currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) +180 # again normalised
             currentSteerAngle = ob['robot_0']['joint_state']['steering']
             ob, _, _, _ = self.env.step(action) #update the environment with the action
             
-            #when the wheels are fully turned stop turning the wheels and start moving the car (needs to be this way because otherwise we cannot connect this to reeds shepp)
+            # As soon as the wheels are fully turned in: stop turning the wheels and start moving the car 
+            # (needs to be this way because otherwise we cannot connect this to Dubins Path Planning)
             if  abs(currentSteerAngle[0]) >= self.max_steer and NEXT:
                 action[1] = 0
                 action[0] = 1.0
                 NEXT = False
                 NEXT2 = True
 
-            #if you have reached your orientation move your wheels back to a neutral position
+            # In case we have reached the desired orientation: move your wheels back to the neutral position (e.g. 0 degree angle)
             if np.allclose(InitialOrientation - angle, currentOrientation,atol=0.8)  and NEXT2 and not Special_Case:
                 action = copy.deepcopy(self.turn_left)
                 NEXT2 = False
@@ -192,23 +205,18 @@ class runPrius():
                 NEXT2 = False
                 NEXT3 = True
                 
-            #if your wheels have reach a neutral position ~0 degrees relative to car go to DEFAULT function and await next order of controller.
+            # In case your wheels have reached the neutral position e.g. 0 degrees(relative to car) enter Default state and await control command.
             if np.allclose(currentSteerAngle,0,atol=0.01) and NEXT3:
                 NEXT3 = False
                 break
             
-            # print("special case:        ",Special_Case)
-            # print("current orientation: ",currentOrientation)
-            # print("desired orientation: ",InitialOrientation - angle)
-            # print("3 consecutive checks: ",np.allclose((currentOrientation - angle ), InitialOrientation,atol=0.8), NEXT2 ,not Special_Case)
-            # print("")
             
 
     def Forward(self):
-        # find the node location by indexing at self.count (which contains the index of the current action)
-        #do this in the list which contain the node locations to obtain the node location assosiated with the current action
-        #take the euclidan distance of this location and of your current location
-        #keep looping untill car is within some tollerance of the next node
+        """ Get node location by indexing at self.count (contains index of the current action)."""
+        """ Apply to list with node locations to obtain current action associated with node location"""
+        """ Determine euclidean distance between this location and your current location. """
+        """ Repeat until car is within certain tolerance threshold of next node. """
 
         action = copy.deepcopy(self.drive_forward)
         ob, _, _, _ = self.env.step(action)
@@ -222,15 +230,10 @@ class runPrius():
             current_location = [ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1]]
             current_dist = math.sqrt((current_location[0]-start_loc[0])**2+(current_location[1]-start_loc[1])**2)
 
-            # print("current_dist: ",current_dist)
-            # print("desired_distance: ",desired_distance)
-            # print("")
-
-            test = self.lidar._distances
    
-
-
     def switcher(self):
+        """ Switcher function which assists the controller in switching"""
+        """ between states if new control command is ready"""
         while(True):
             if self.ready:
                 self.update = True
@@ -259,16 +262,16 @@ if __name__ == "__main__":
     plot = True
 
     #generate RRT
-    rrt = RRT(start_pos=start_pos, 
-              goal_pos=goal_pos, 
-              goal_thresh=goal_threshold, 
-              field_dimensions=field_dimensions, 
-              max_iterations=max_iterations, 
-              max_step_size=max_step_size, 
-              n_obstacles=n_obstacles, 
-              robot_radius=robot_radius, 
-              turn_radius=turn_radius,
-              plot=plot)
+    rrt = RRT(start_pos         = start_pos, 
+              goal_pos          = goal_pos, 
+              goal_thresh       = goal_threshold, 
+              field_dimensions  = field_dimensions, 
+              max_iterations    = max_iterations, 
+              max_step_size     = max_step_size, 
+              n_obstacles       = n_obstacles, 
+              robot_radius      = robot_radius, 
+              turn_radius       = turn_radius,
+              plot              = plot)
 
     # Run the RRT algorithm and terminate if the goal has not been reached
     reached = rrt.run_rrt_star()
@@ -276,32 +279,18 @@ if __name__ == "__main__":
         print("No path found!")
     else:
         # Get the path from start to goal
-        reed_shepp_nodes = [node.position for node in rrt.goal_path]
+        dubins_nodes = [node.position for node in rrt.goal_path]
 
-        """
-        interpolate the found nodes so that it can work with reed-shepp paths
-        """
-        # reed_shepp_nodes = [rrt_nodes[0]] 
-        # for i in range(len(rrt_nodes)-2):
-        #     p1 = rrt_nodes[i+1]
-        #     p2 = rrt_nodes[i]
-        #     p3 = rrt_nodes[i+2]
-        #     node1,node2,center=find_tangent_points(p1,p2,p3,turn_radius)
-        #     reed_shepp_nodes.append(node1)
-        #     reed_shepp_nodes.append(node2)
-        # reed_shepp_nodes.append(rrt_nodes[-1])
+        # Generate a set of actions and correcponding parameters (distance or angle) for the car to follow
+        actions, parameters = controller(dubins_nodes,turn_radius)
+        
+        # Initialising the class will run the simulation with the prius model.
+        Run_simulation= runPrius(actions=actions,parameters=parameters,obstacles=rrt.obstacles) 
+
+    
+    
 
 
-        #set of actions and correcponding parameters (distance or angle) for car to follow
-        actions, parameters = controller(reed_shepp_nodes,turn_radius)
 
-        # # Create the environment
-        # env = Environment(field_dimensions=field_dimensions, 
-        #                   obstacles=rrt.obstacles, 
-        #                   robots=robots, 
-        #                   render=render, 
-        #                   start_pos=start_pos)
+    
 
-        Run_simulation= runPrius(actions=actions,parameters=parameters,obstacles=rrt.obstacles) #initialise the car
-
-        # #threading example: https://realpython.com/intro-to-python-threading/
