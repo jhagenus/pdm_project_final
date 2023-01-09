@@ -15,24 +15,23 @@ import gym
 class runPrius():
 
     # Class constructor
-    def __init__(self, actions=[],parameters=[],obstacles=0):
-        starting_position_x  = -8
-        starting_position_y  = -8
-        starting_orientation = 0
+    def __init__(self, rrt, actions=[],parameters=[]):
+        starting_position_x, starting_position_y, starting_position_z  = rrt.start_pos
+        starting_orientation = rrt.start_orientation
         self.actions         = actions
         self.ready           = False
         self.update          = False
         self.max_steer       = 0.9
         self.count           = -1
         self.parameters      = parameters
-        self.obstacles       = obstacles
+        self.obstacles       = rrt.obstacles
 
         # Implement the Prius Robot using the Bicycle model and create our gym environment
         robots = [Prius(mode="vel")]
         
         #initialise the environment
         self.env = gym.make("urdf-env-v0", dt=0.01, robots=robots, render=True)
-        starting_position = np.array([starting_position_x, starting_position_y, starting_orientation*(math.pi/180)])
+        starting_position = np.array([starting_position_x, starting_position_y, starting_orientation])
         ob = self.env.reset(pos=starting_position)
         self.generate_obstacles()
 
@@ -285,7 +284,7 @@ if __name__ == "__main__":
         actions, parameters = controller(dubins_nodes,turn_radius)
         
         # Initialising the class will run the simulation with the prius model.
-        Run_simulation= runPrius(actions=actions,parameters=parameters,obstacles=rrt.obstacles) 
+        Run_simulation= runPrius(rrt=rrt, actions=actions,parameters=parameters) 
 
     
     

@@ -146,9 +146,9 @@ class RRT:
         self.offset = 2
 
         # Generate a point with an offset from the start position depending on a random orientation.
-        theta = np.random.uniform(0, 0.5*np.pi)
-        x = self.start_pos[0] + self.offset * np.cos(theta)
-        y = self.start_pos[1] + self.offset * np.sin(theta)
+        self.start_orientation = np.random.uniform(0, 0.5*np.pi)
+        x = self.start_pos[0] + self.offset * np.cos(self.start_orientation)
+        y = self.start_pos[1] + self.offset * np.sin(self.start_orientation)
         z = self.start_pos[2]
         new_start_pos = np.array([x, y, z])
         new_start_node = Node(new_start_pos, Node(self.start_pos, None))
@@ -156,7 +156,7 @@ class RRT:
         self.nodes.append(new_start_node)
 
         # Generate a parking position in front of the parking_space.
-        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - self.offset, self.goal_pos[2]])
+        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - self.offset - 1, self.goal_pos[2]])
 
 
     def goal_reached(self, node):
@@ -257,13 +257,17 @@ class RRT:
         sphere_positions = []
         radius = .5
 
-        for i in range(3):
-            sphere_positions.append([self.goal_pos[0]-2*radius, self.goal_pos[1]-radius+i*(2*radius), 0])
+        n_sides = 3
+        n_back = 3
 
-        for i in range(3):
-            sphere_positions.append([self.goal_pos[0]+2*radius, self.goal_pos[1]-radius+i*(2*radius), 0])
+        for i in range(n_sides):
+            
+            sphere_positions.append([self.goal_pos[0]-2*radius, self.goal_pos[1]-0.5*radius+i*(2*radius), 0])
 
-        sphere_positions.append([self.goal_pos[0], self.goal_pos[1] + 3*radius, 0])
+        for i in range(n_sides):
+            sphere_positions.append([self.goal_pos[0]+2*radius, self.goal_pos[1]-0.5*radius+i*(2*radius), 0])
+
+        sphere_positions.append([self.goal_pos[0], self.goal_pos[1] + 4*radius, 0])
 
         for position in sphere_positions:
             circle = Circle(position, radius, self.robot_radius)
