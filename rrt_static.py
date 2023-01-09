@@ -28,10 +28,11 @@ class Circle:
         - radius: The radius of the circle. (float)
         - robot_radius: The radius of the robot. (float)"""
 
-    def __init__(self, position, radius, robot_radius):
+    def __init__(self, position, radius, robot_radius, movable=True):
         self.position = position
         self.radius = radius
         self.robot_radius = robot_radius
+        self.movable = movable
     
     def point_collision(self, point_pos):
         """Check if a point is inside the circle.
@@ -255,22 +256,26 @@ class RRT:
         """Create a parking space with spheres"""
 
         sphere_positions = []
-        radius = .5
+        radius = .2
 
-        n_sides = 3
-        n_back = 3
+        n_sides = 10
+        n_back = 7
 
+        parking_height = 2.5
+        parking_width = 3 * self.robot_radius
+        parking_space_dimensions = [self.goal_pos[0]-0.5*parking_width, self.goal_pos[0]+0.5*parking_width, self.goal_pos[1]-(1/3)*parking_height, self.goal_pos[1]+(2/3)*parking_height]
+
+        # Creating spheres on the left and right side of the parking space
         for i in range(n_sides):
-            
-            sphere_positions.append([self.goal_pos[0]-2*radius, self.goal_pos[1]-0.5*radius+i*(2*radius), 0])
+            sphere_positions.append([parking_space_dimensions[0]-radius, parking_space_dimensions[2]+i*(parking_height+radius)/(n_sides-1), radius])
+            sphere_positions.append([parking_space_dimensions[1]+radius, parking_space_dimensions[2]+i*(parking_height+radius)/(n_sides-1), radius])
 
-        for i in range(n_sides):
-            sphere_positions.append([self.goal_pos[0]+2*radius, self.goal_pos[1]-0.5*radius+i*(2*radius), 0])
-
-        sphere_positions.append([self.goal_pos[0], self.goal_pos[1] + 4*radius, 0])
+        # Creating spheres on the back side of the parking space
+        for i in range(n_back):
+            sphere_positions.append([(parking_space_dimensions[0]-radius)+i*(parking_width+2*radius)/(n_back-1), parking_space_dimensions[3]+radius, radius])
 
         for position in sphere_positions:
-            circle = Circle(position, radius, self.robot_radius)
+            circle = Circle(position, radius, self.robot_radius, movable=False)
             self.obstacles.append(circle)
 
     
@@ -448,10 +453,10 @@ class RRT:
         self.goal_path = new_goal_path
     
 
-    def add_reeds_shepp_points(self):
-        """Add the points from the Reeds-Shepp path to the goal path"""
+    def add_dubins_path_points(self):
+        """Add the points from the Dubins path to the goal path"""
 
-        shepp_goal_path = [self.goal_path[0]]
+        dubins_goal_path = [self.goal_path[0]]
 
         for i in range(1, len(self.goal_path)-1):
             p1 = self.goal_path[i-1].position
@@ -461,13 +466,12 @@ class RRT:
 
             turn_start, turn_end, turn_center = find_tangent_points(p1, p2, p3, radius)
 
-            shepp_goal_path.append(Node(turn_start, shepp_goal_path[-1]))
-            # shepp_goal_path.append(Node(p2, shepp_goal_path[-1]))
-            shepp_goal_path.append(Node(turn_end, shepp_goal_path[-1]))
+            dubins_goal_path.append(Node(turn_start, dubins_goal_path[-1]))
+            dubins_goal_path.append(Node(turn_end, dubins_goal_path[-1]))
         
-        shepp_goal_path.append(Node(self.goal_path[-1].position, shepp_goal_path[-1]))
+        dubins_goal_path.append(Node(self.goal_path[-1].position, dubins_goal_path[-1]))
 
-        self.goal_path = shepp_goal_path
+        self.goal_path = dubins_goal_path
         
     
 
@@ -502,7 +506,7 @@ class RRT:
                                        field_dimensions=self.field_dimensions)
                 plot_graph.create_graph()
             
-            self.add_reeds_shepp_points()
+            self.add_dubins_path_points()
             if self.plot:
                 # Plot graph of nodes and path to goal
                 plot_graph = PlotGraph(nodes=self.nodes, 
@@ -543,16 +547,17 @@ class PlotGraph:
         """Create graph of nodes and path to goal"""
 
         # set plot parameters
-        plt.rcParams["figure.figsize"] = [10.1, 10.1]
+        plt.rcParams["figure.figsize"] = [10, 10]
         plt.rcParams["figure.autolayout"] = True
-        plt.xlim(self.field_dimensions[0][0], self.field_dimensions[0][1])
-        plt.ylim(self.field_dimensions[1][0], self.field_dimensions[1][1])
+        plt.xlim(self.field_dimensions[0][0]-1, self.field_dimensions[0][1]+1)
+        plt.ylim(self.field_dimensions[1][0]-1, self.field_dimensions[1][1]+1)
         plt.grid()
 
         # plot nodes, path to goal and obstacles
-        self.plot_nodes()
-        self.plot_path()
         self.plot_obstacles()
+        self.plot_nodes()
+        self.plot_tree()
+        self.plot_path()
         plt.show()
         
         
@@ -581,6 +586,16 @@ class PlotGraph:
             x = node.position[0]
             y = node.position[1]
             plt.plot(x, y, marker="o", markersize=2, markerfacecolor="green", markeredgecolor="green")
+    
+
+    def plot_tree(self):
+        """Plot tree"""
+
+        for node in self.nodes:
+            if node.parent is not None:
+                source = node.parent.position
+                target = node.position
+                plt.plot([source[0], target[0]], [source[1], target[1]], 'b-')
 
 
     def plot_path(self):
@@ -593,7 +608,7 @@ class PlotGraph:
             target = self.goal_path[i+1].position
             plt.plot(source[0], source[1], marker="o", markersize=4, markerfacecolor="green", markeredgecolor="green")
             plt.plot(target[0], target[1], marker="o", markersize=4, markerfacecolor="green", markeredgecolor="green")
-            plt.plot([source[0], target[0]], [source[1], target[1]], 'b-')
+            plt.plot([source[0], target[0]], [source[1], target[1]], 'r-')
 
 
 if __name__ == "__main__":
