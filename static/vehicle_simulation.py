@@ -1,9 +1,3 @@
-# Import package dependencies
-
-from MotionPlanningEnv.sphereObstacle import SphereObstacle
-from command_generator import controller
-from urdfenvs.robots.prius import Prius
-from rrt_static import RRT
 import numpy as np
 import threading
 import time
@@ -11,11 +5,21 @@ import copy
 import math
 import gym
 
+from MotionPlanningEnv.sphereObstacle import SphereObstacle
+from urdfenvs.robots.prius import Prius
+
+# make sure the folder utils can be located
+import sys
+sys.path.append('../pdm_project_final')
+
+from utils.vehicle_controller import controller
+from rrt_static import RRT_Static
+
 
 class runPrius():
 
     # Class constructor
-    def __init__(self, rrt, actions=[],parameters=[]):
+    def __init__(self, rrt, actions=[], parameters=[]):
         starting_position_x, starting_position_y, starting_position_z  = rrt.start_pos
         starting_orientation = rrt.start_orientation
         self.actions         = actions
@@ -47,7 +51,6 @@ class runPrius():
         self.Switch = False
         x = threading.Thread(target=self.switcher) # initialise a thread
         x.start() # start the thread
-
 
         #A finite state machine is implemented using this class with the first state being default.
         self.DEFAULT()        
@@ -245,46 +248,38 @@ class runPrius():
 
 if __name__ == "__main__":
 
-    """
-    first we create a rrt* like path
-    """
      # Set parameters
-    start_pos = np.array([-8, -8, 0])
-    goal_pos = np.array([8, 8, 0])
-    max_iterations = 1000
-    max_step_size = 2
-    goal_threshold = 0.5
-    n_obstacles = 10
-    field_dimensions = np.array([(-9, 9), (-9, 9), (0, 0)])
-    robot_radius = 0.5
-    turn_radius = 1.37
-    plot = True
+    goal_pos            = np.array([8, 8, 0])
+    max_iterations      = 1000
+    max_step_size       = 2
+    goal_threshold      = 0.5
+    n_obstacles         = 10
+    field_dimensions    = np.array([(-9, 9), (-9, 9), (0, 0)])
+    robot_width         = 1
+    turn_radius         = 1.37
+    plot                = True
 
     #generate RRT
-    rrt = RRT(start_pos         = start_pos, 
-              goal_pos          = goal_pos, 
-              goal_thresh       = goal_threshold, 
-              field_dimensions  = field_dimensions, 
-              max_iterations    = max_iterations, 
-              max_step_size     = max_step_size, 
-              n_obstacles       = n_obstacles, 
-              robot_radius      = robot_radius, 
-              turn_radius       = turn_radius,
-              plot              = plot)
+    rrt = RRT_Static(goal_pos          = goal_pos, 
+                     goal_threshold    = goal_threshold, 
+                     field_dimensions  = field_dimensions, 
+                     max_iterations    = max_iterations, 
+                     max_step_size     = max_step_size, 
+                     n_obstacles       = n_obstacles, 
+                     robot_width       = robot_width, 
+                     turn_radius       = turn_radius)
 
     # Run the RRT algorithm and terminate if the goal has not been reached
-    reached = rrt.run_rrt_star()
-    if not reached:
-        print("No path found!")
-    else:
-        # Get the path from start to goal
-        dubins_nodes = [node.position for node in rrt.goal_path]
+    reached = rrt.run_rrt(star=True, dubins=True, plot=plot)
 
-        # Generate a set of actions and correcponding parameters (distance or angle) for the car to follow
-        actions, parameters = controller(dubins_nodes,turn_radius)
-        
-        # Initialising the class will run the simulation with the prius model.
-        Run_simulation= runPrius(rrt=rrt, actions=actions,parameters=parameters) 
+    # Get the path from start to goal
+    dubins_path = [node.position for node in rrt.goal_path]
+
+    # Generate a set of actions and correcponding parameters (distance or angle) for the car to follow
+    actions, parameters = controller(dubins_path, turn_radius)
+    
+    # Initialising the class will run the simulation with the prius model.
+    Run_simulation = runPrius(rrt=rrt, actions=actions, parameters=parameters) 
 
     
     
