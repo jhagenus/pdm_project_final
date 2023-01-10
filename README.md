@@ -63,7 +63,7 @@ python3 ./static/vehicle_simulation.py
 Or the following commands when you are using anaconda:
 ```
 conda activate PDM3.8
-cd gym_envs_urdf/pdm_project_final/
+cd ~/gym_envs_urdf/pdm_project_final/
 python3 ./static/vehicle_simulation.py
 
 ```
