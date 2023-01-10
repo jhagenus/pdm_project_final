@@ -2,15 +2,7 @@ import numpy as np
 import threading
 import time
 import copy
-import math
-import sys
-from pathlib import Path
-
-# Adding the needed directories to the system
-project_dir = Path(__file__).resolve().parent.parent
-gym_dir = project_dir.parent.parent
-sys.path.append(str(project_dir))
-sys.path.append(str(gym_dir))
+import config
 
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
 from urdfenvs.robots.prius import Prius
@@ -110,7 +102,7 @@ class runPrius():
         ob, _, _, _ = self.env.step(action)
 
         # The orientation goes from -180 to 180, these values are normalised to 0 to 360 degrees
-        InitialOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) + 180 
+        InitialOrientation = ob['robot_0']['joint_state']['position'][2]*(180/np.pi) + 180 
 
         # In the case that the steering of the robot will turn it past the 360/0 degree point a 
         # special care needs to be given to define how the robot needs to turn
@@ -120,7 +112,7 @@ class runPrius():
         while(True):
             
             # Current Orientation measures how far the robot currently is, currentSteerAngle does the same but for steering angle
-            currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) +180 
+            currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/np.pi) +180 
             currentSteerAngle = ob['robot_0']['joint_state']['steering']
             ob, _, _, _ = self.env.step(action) 
 
@@ -165,14 +157,14 @@ class runPrius():
 
         # The orientation goes from -180 to 180, these values are normalised to 0 to 360 degrees
         ob, _, _, _ = self.env.step(action)
-        InitialOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) + 180 # orientation goes from -180 to 180. we normalise values here
+        InitialOrientation = ob['robot_0']['joint_state']['position'][2]*(180/np.pi) + 180 # orientation goes from -180 to 180. we normalise values here
         if InitialOrientation -angle <= 90 and InitialOrientation -angle > 0 :
             Special_Case = True
 
         while(True):
 
             # Current Orientation measures how far the robot currently is, currentSteerAngle does the same but for steering angle
-            currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/math.pi) +180 # again normalised
+            currentOrientation = ob['robot_0']['joint_state']['position'][2]*(180/np.pi) +180 # again normalised
             currentSteerAngle = ob['robot_0']['joint_state']['steering']
             ob, _, _, _ = self.env.step(action) #update the environment with the action
             
@@ -218,7 +210,7 @@ class runPrius():
         while(not np.allclose(current_dist,desired_distance, atol=0.01)):
             ob, _, _, _ = self.env.step(action)
             current_location = [ob['robot_0']['joint_state']['position'][0],ob['robot_0']['joint_state']['position'][1]]
-            current_dist = math.sqrt((current_location[0]-start_loc[0])**2+(current_location[1]-start_loc[1])**2)
+            current_dist = np.sqrt((current_location[0]-start_loc[0])**2+(current_location[1]-start_loc[1])**2)
 
    
     def switcher(self):

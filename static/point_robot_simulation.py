@@ -1,24 +1,13 @@
 import gym
 import numpy as np
 import matplotlib.pyplot as plt
+import config
 
 from urdfenvs.robots.generic_urdf import GenericUrdfReacher
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
 
 from rrt_static import RRT_Static
 from utils.environment import Environment
-
-
-
-def removearray(L,arr):
-    ind = 0
-    size = len(L)
-    while ind != size and not np.array_equal(L[ind],arr):
-        ind += 1
-    if ind != size:
-        L.pop(ind)
-    else:
-        raise ValueError('array not found in list.')
 
 
 def control_algorithm(current_location, desired_location):
@@ -69,30 +58,12 @@ def move_robot(path_to_follow, env):
 
 def run_point_robot(rrt):
     """Runs the point robot in the environment.
-        - start_pos: The starting position of the robot. (x, y, z)
-        - goal_pos: The goal position of the robot. (x, y, z)
-        - field_dimensions: The dimensions of the field. [(x_min, x_max), (y_min, y_max), (z_min, z_max))]
-        - max_iterations: The maximum number of iterations that the RRT algorithm should run for. (int)
-        - max_step_size: The maximum step size that the RRT algorithm should take. (float)
-        - goal_threshold: The threshold that the RRT algorithm should use to determine if the goal has been reached. (float)
-        - n_obstacles: The number of obstacles that should be in the environment. (int)
-        - robot_width: The radius of the robot. (float)
-        - plot: Boolean that determines if the RRT algorithm should plot the path or not. (bool)
-        - render: Boolean that determines if the environment should be rendered or not. (bool)"""
+        - rrt: The RRT algorithm that has been used to generate the path."""
     
     # Create the robot
     robots = [
         GenericUrdfReacher(urdf="pointRobot.urdf", mode="vel"),
-    ]    
-    
-    # rrt = RRT_Static(goal_pos           = goal_pos, 
-    #                  goal_threshold     = goal_threshold, 
-    #                  field_dimensions   = field_dimensions, 
-    #                  max_iterations     = max_iterations, 
-    #                  max_step_size      = max_step_size, 
-    #                  n_obstacles        = n_obstacles, 
-    #                  robot_width        = robot_width, 
-    #                  turn_radius        = turn_radius)
+    ]
 
     # Run the RRT algorithm and terminate if the goal has not been reached
     rrt.run_rrt(dubins=False)
