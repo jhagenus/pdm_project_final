@@ -24,8 +24,8 @@ The gym environment can be installed by running the following command in the roo
 ```
 cd
 git clone https://github.com/maxspahn/gym_envs_urdf.git
-pip3 install .
 cd ~/gym_envs_urdf
+pip3 install .
 poetry install
 poetry shell
 ```
