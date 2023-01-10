@@ -4,7 +4,7 @@ chardet==5.1.0
 cryptography==39.0.0
 Cython==0.29.33
 dl==0.1.0
-gym==0.26.2
+gym==0.21
 ipaddr==2.2.0
 keyring==23.13.1
 matplotlib==3.6.2
@@ -17,6 +17,6 @@ pybullet==3.2.5
 pyOpenSSL==23.0.0
 simplejson==3.18.1
 unicodedata2==15.0.0
-urdfenvs==0.4.2
+urdfenvs==0.4.0
 urllib3_secure_extra==0.1.0
-wincertstore==0.2.1
+wincertstore==0.2

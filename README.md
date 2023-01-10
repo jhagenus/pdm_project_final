@@ -36,8 +36,8 @@ The project can be installed by running the following command in the root direct
 ```
 cd ~/gym_envs_urdf
 pip install motion-planning-scenes
-pip install --force-reinstall numpy==1.19.5
 git clone git@github.com:jhagenus/pdm_project_final.git
+python3 -m pip install -r requirements.txt
 ```
 
 ### Setup using anaconda
