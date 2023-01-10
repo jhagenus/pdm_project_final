@@ -37,6 +37,7 @@ The project can be installed by running the following command in the root direct
 cd ~/gym_envs_urdf
 pip install motion-planning-scenes
 git clone git@github.com:jhagenus/pdm_project_final.git
+cd ~/gym_envs_urdf/pdm_project_final
 python3 -m pip install -r requirements.txt
 ```
 
