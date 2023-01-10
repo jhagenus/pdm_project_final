@@ -39,7 +39,7 @@ pip install --force-reinstall numpy==1.19.5
 git clone git@github.com:jhagenus/pdm_project_final.git
 ```
 
-## installing the environment using anaconda:
+### installing the environment using anaconda:
 ```
 git clone https://github.com/maxspahn/gym_envs_urdf.git
 cd gym_envs_urdf
