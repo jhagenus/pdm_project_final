@@ -173,14 +173,14 @@ class RRT_Static:
 
         # Initializing the dimensions of the parking space
         parking_height = 2 * self.robot_width
-        parking_width = 1.5 * self.robot_width
+        parking_width = 2 * self.robot_width
         parking_space_dimensions = [self.goal_pos[0]-0.5*parking_width, self.goal_pos[0]+0.5*parking_width, 
                                     self.goal_pos[1]-(1/3)*parking_height, self.goal_pos[1]+(2/3)*parking_height]
 
         # Initializing the radius of the spheres and the number of spheres
         radius = .2
         n_sides = int(10 * self.robot_width)
-        n_back = int(7 * self.robot_width)
+        n_back = int(8 * self.robot_width)
 
         sphere_positions = []
 
