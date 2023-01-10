@@ -38,7 +38,7 @@ cd ~/gym_envs_urdf
 pip install motion-planning-scenes
 git clone git@github.com:jhagenus/pdm_project_final.git
 cd ~/gym_envs_urdf/pdm_project_final
-apt install python3.8 -y
+sudo apt install python3.8 -y
 python3.8 -m pip install -r requirements.txt
 ```
 
