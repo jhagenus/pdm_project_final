@@ -102,6 +102,4 @@ dependencies:
       - scipy==1.9.3
       - setuptools==39.1.0
       - trimesh==3.17.1
-      - urdfenvs==0.4.0
-      - urdfpy==0.0.22
-prefix: /home/jessedolfin/.conda/envs/PDM3.8
+prefix: ~/.conda/envs/PDM3.8
