@@ -46,9 +46,11 @@ cd ~/gym_envs_urdf/pdm_project_final/
 python3 ./static/vehicle_simulation.py
 ```
 
-##installing the environment using anaconda:
+## installing the environment using anaconda:
+```
 git clone https://github.com/maxspahn/gym_envs_urdf.git
 cd gym_envs_urdf
 git clone git@github.com:jhagenus/pdm_project_final.git
 cd pdm_project_final
 conda env create -f pdm.yml
+```
