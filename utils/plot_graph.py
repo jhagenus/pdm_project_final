@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 from utils.obstacles import Circle
 
 
@@ -12,23 +13,25 @@ class PlotGraph:
         - goal_path: List of nodes from start to goal by following parent nodes.
         - plot: Boolean that determines if the graph should be plotted or not. (Bool: True)"""
         
-    def __init__(self, nodes, field_dimensions, start_pos, goal_pos, obstacles, goal_path, plot=True):
-        self.nodes = nodes
-        self.field_dimensions = field_dimensions
-        self.start_pos = start_pos
-        self.goal_pos = goal_pos
-        self.obstacles = obstacles
-        self.goal_path = goal_path
-        self.plot = plot
+    def __init__(self, rrt, name="RRT"):
+        self.rrt = rrt
+        self.name = name
 
-        if self.plot:
+        if rrt.plot:
             self.create_graph()
+    
+    def plot_start_and_goal(self):
+        """Plot start and goal position"""
+
+        plt.plot(self.rrt.start_pos[0], self.rrt.start_pos[1], marker="o", markersize=10, markeredgecolor="orange", markerfacecolor="orange", label="Start")
+        plt.plot(self.rrt.goal_pos[0], self.rrt.goal_pos[1], marker="o", markersize=10, markeredgecolor="red", markerfacecolor="red", label="Goal")
+        
         
         
     def plot_obstacles(self):
         """Plot obstacles"""
 
-        for obstacle in self.obstacles:
+        for obstacle in self.rrt.obstacles:
 
             # Check if obstacle is a circle
             if type(obstacle) == Circle:
@@ -41,12 +44,8 @@ class PlotGraph:
     def plot_nodes(self):
         """Plot nodes as dots on graph"""
 
-        # Plot start and goal position
-        plt.plot(self.start_pos[0], self.start_pos[1], marker="o", markersize=10, markeredgecolor="red", markerfacecolor="red")
-        plt.plot(self.goal_pos[0], self.goal_pos[1], marker="o", markersize=10, markeredgecolor="red", markerfacecolor="red")
-        
         # Plot nodes as green dots
-        for node in self.nodes[1:]:
+        for node in self.rrt.nodes[1:]:
             x = node.position[0]
             y = node.position[1]
             plt.plot(x, y, marker="o", markersize=3, markerfacecolor="blue", markeredgecolor="blue")
@@ -55,7 +54,7 @@ class PlotGraph:
     def plot_tree(self):
         """Plot all edges between nodes"""
 
-        for node in self.nodes:
+        for node in self.rrt.nodes:
             if node.parent is not None:
                 source = node.parent.position
                 target = node.position
@@ -65,12 +64,11 @@ class PlotGraph:
     def plot_path(self):
         """Plot path to goal"""
 
-        for i in range(len(self.goal_path)-1):
+        for i in range(1, len(self.rrt.goal_path)):
 
             # Plot line between nodes in the path to goal
-            source = self.goal_path[i].position
-            target = self.goal_path[i+1].position
-            plt.plot(source[0], source[1], marker="o", markersize=5, markerfacecolor="red", markeredgecolor="red")
+            source = self.rrt.goal_path[i-1].position
+            target = self.rrt.goal_path[i].position
             plt.plot(target[0], target[1], marker="o", markersize=5, markerfacecolor="red", markeredgecolor="red")
             plt.plot([source[0], target[0]], [source[1], target[1]], 'r-', linewidth=3)
 
@@ -81,8 +79,8 @@ class PlotGraph:
         # set plot parameters
         plt.rcParams["figure.figsize"] = [10, 10]
         plt.rcParams["figure.autolayout"] = True
-        plt.xlim(self.field_dimensions[0][0]-1, self.field_dimensions[0][1]+1)
-        plt.ylim(self.field_dimensions[1][0]-1, self.field_dimensions[1][1]+1)
+        plt.xlim(self.rrt.field_dimensions[0][0]*1.1, self.rrt.field_dimensions[0][1]*1.1)
+        plt.ylim(self.rrt.field_dimensions[1][0]*1.1, self.rrt.field_dimensions[1][1]*1.1)
         plt.grid()
 
         # plot nodes, path to goal and obstacles
@@ -90,4 +88,14 @@ class PlotGraph:
         self.plot_nodes()
         self.plot_tree()
         self.plot_path()
+        self.plot_start_and_goal()
+
+        # Set title and create legend
+        plt.title(self.name)
+        handles, labels = plt.gca().get_legend_handles_labels()
+        line = Line2D([0],[0], label='Path to goal', color='red', linewidth=3)
+        print(handles)
+        handles.append(line)
+        plt.legend(handles=handles, loc="upper left", fontsize=10)
+
         plt.show()

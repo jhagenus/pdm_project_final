@@ -1,17 +1,24 @@
 import numpy as np
 
+
 class Circle:
     """Circle class for obstacles.
         - position: The position of the center of the circle. (x, y, z)
         - radius: The radius of the circle. (float)
-        - robot_radius: The radius of the robot. (float)"""
+        - robot_width: The width of the robot. (float)
+        - speed: The speed of the circle. (float)
+        - trajectory: The trajectory of the circle. (np.array(x, y, z))
+        - movable: Boolean that determines if the circle is movable or not."""
 
-    def __init__(self, position, radius, robot_width, movable=True):
+    def __init__(self, position, radius, robot_width, speed=0, trajectory=None, movable=True):
         self.position = position
         self.radius = radius
         self.robot_radius = robot_width / 2
+        self.speed = speed
+        self.trajectory = trajectory
         self.movable = movable
     
+
     def point_collision(self, point_pos):
         """Check if a point is inside the circle.
             - point_pos: The position of the point. (x, y, z)"""
@@ -24,6 +31,7 @@ class Circle:
             return True
 
         return False
+
 
     def intersection(self, source_pos, target_pos):
         """Check line-sphere (circle) intersection

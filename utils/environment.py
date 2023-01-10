@@ -1,6 +1,8 @@
 import numpy as np
 import gym
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
+from MotionPlanningEnv.dynamicSphereObstacle import DynamicSphereObstacle
+
 import pybullet as p
 
 
@@ -31,22 +33,38 @@ class Environment:
 
     
     def generate_obstacles(self):
-        """Function which generates the obstacle for the gym """
-        """environment using randomly initialized positions. """
+        """Function which generates the obstacle for the gym 
+        environment using randomly initialized positions. """
            
         for obstacle in self.obstacles:
-            radius = float(obstacle.radius)
-            position = [obstacle.position[0],obstacle.position[1], radius]
-            position = np.array(position, dtype=float).tolist()
+            
+            # Check if the obstacle is dynamic or not
+            if obstacle.trajectory is not None:
 
-            # Create the obstacle dictionary with the position and radius and add it to the environment
-            obs_dict = {
-                "type": "sphere",
-                'movable': obstacle.movable,
-                "geometry": {"position": position, "radius": radius},
-                }
-            sphereObst = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
-            self.env.add_obstacle(sphereObst)
+                radius = float(obstacle.radius)
+                trajectory = obstacle.trajectory
+
+                # Create the obstacle dictionary with the trajectory and radius and add it to the environment
+                obs_dict = {
+                    "type": "sphere",
+                    "geometry": {"trajectory": trajectory, "radius": radius},
+                    }
+                sphere = DynamicSphereObstacle(name="simpleSphere", content_dict=obs_dict)
+                self.env.add_obstacle(sphere)
+
+            else:
+                radius = float(obstacle.radius)
+                position = [obstacle.position[0],obstacle.position[1], radius]
+                position = np.array(position, dtype=float).tolist()
+
+                # Create the obstacle dictionary with the position and radius and add it to the environment
+                obs_dict = {
+                    "type": "sphere",
+                    'movable': obstacle.movable,
+                    "geometry": {"position": position, "radius": radius},
+                    }
+                sphere = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
+                self.env.add_obstacle(sphere)                
     
 
     def generate_outer_walls(self):

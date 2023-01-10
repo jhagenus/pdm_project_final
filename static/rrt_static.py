@@ -1,9 +1,6 @@
 import numpy as np
 import random
-
-# Make sure that utils can be located
-import sys
-sys.path.append('../pdm_project_final/')
+import config
 
 from utils.obstacles import Circle
 from utils.plot_graph import PlotGraph
@@ -33,8 +30,8 @@ class RRT_Static:
         - robot_width: The width of the robot. (float)
         - plot: A boolean to indicate whether to plot the RRT tree before running the simulation. (bool)"""
 
-    def __init__(self, goal_pos, goal_threshold, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_width, turn_radius=0):
-        self.goal_pos = np.array(goal_pos)
+    def __init__(self, goal_pos, goal_threshold, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_width, turn_radius=0, plot=True):
+        self.goal_pos = goal_pos
         self.goal_threshold = goal_threshold
         self.field_dimensions = field_dimensions
         self.max_iterations = max_iterations
@@ -42,10 +39,12 @@ class RRT_Static:
         self.n_obstacles = n_obstacles
         self.robot_width = robot_width
         self.turn_radius = turn_radius
+        self.plot = plot
 
         self.reached = False
         self.obstacles = []
         self.goal_path = []
+        self.nodes = []
 
         self.generate_start_and_goal()
 
@@ -59,20 +58,31 @@ class RRT_Static:
         z = np.random.uniform(self.field_dimensions[2][0], self.field_dimensions[2][1])
         self.start_pos = np.array([x, y, z])
 
-        self.offset = 2
+        # Generate a random goal position.
+        if self.goal_pos is None:
+            x = np.random.uniform(self.field_dimensions[0][0], self.field_dimensions[0][1])
+            y = np.random.uniform(self.field_dimensions[1][0], self.field_dimensions[1][1])
+            z = np.random.uniform(self.field_dimensions[2][0], self.field_dimensions[2][1])
+            self.goal_pos = np.array([x, y, z])
 
-        # Generate a point with an offset from the start position depending on a random orientation.
-        self.start_orientation = np.random.uniform(0, 0.5*np.pi)
-        x = self.start_pos[0] + self.offset * np.cos(self.start_orientation)
-        y = self.start_pos[1] + self.offset * np.sin(self.start_orientation)
-        z = self.start_pos[2]
-        new_start_pos = np.array([x, y, z])
-        new_start_node = Node(new_start_pos, Node(self.start_pos, None))
-        self.nodes = []
-        self.nodes.append(new_start_node)
+        self.offset = 1.5 * self.turn_radius
+        self.final_goal_pos = self.goal_pos
 
-        # Generate a parking position in front of the parking_space.
-        self.parking_pos = np.array([self.goal_pos[0], self.goal_pos[1] - self.offset - 1, self.goal_pos[2]])
+        if self.offset != 0:
+            # Generate a point with an offset from the start position depending on a random orientation.
+            self.start_orientation = np.random.uniform(0, 0.5*np.pi)
+            x = self.start_pos[0] + self.offset * np.cos(self.start_orientation)
+            y = self.start_pos[1] + self.offset * np.sin(self.start_orientation)
+            z = self.start_pos[2]
+            new_start_pos = np.array([x, y, z])
+            new_start_node = Node(new_start_pos, Node(self.start_pos, None))
+            self.nodes.append(new_start_node)
+
+            # Generate a parking position in front of the parking_space.
+            self.goal_pos = np.array([self.goal_pos[0], self.goal_pos[1] - self.offset - 1, self.goal_pos[2]])
+        
+        else:
+            self.nodes.append(Node(self.start_pos, None))
 
 
     def goal_reached(self, node):
@@ -80,7 +90,7 @@ class RRT_Static:
             - node: The node to check. (Node)"""
 
         # Calculate the distance between the node and the goal.
-        dist = np.linalg.norm(np.subtract(self.parking_pos, node.position))
+        dist = np.linalg.norm(np.subtract(self.goal_pos, node.position))
 
         # If the distance between the node and the goal is less than the goal threshold, then the goal has been reached, otherwise it has not.
         if dist < self.goal_threshold:
@@ -122,9 +132,9 @@ class RRT_Static:
         # Check if circle is created inside a radius around the start or goal position.
         safety_radius = self.offset + (self.robot_width/2) + 0.5
         start_dist = np.linalg.norm(np.subtract(circle.position, self.start_pos))
-        parking_dist = np.linalg.norm(np.subtract(circle.position, self.parking_pos))
         goal_dist = np.linalg.norm(np.subtract(circle.position, self.goal_pos))
-        if (start_dist < safety_radius + circle.radius) or (parking_dist < safety_radius + circle.radius) or (goal_dist < safety_radius + circle.radius):
+        final_goal_dist = np.linalg.norm(np.subtract(circle.position, self.final_goal_pos))
+        if (start_dist < safety_radius + circle.radius) or (goal_dist < safety_radius + circle.radius) or (final_goal_dist < safety_radius + circle.radius):
             return False
 
         # Check if the circle is inside another circle.
@@ -172,10 +182,10 @@ class RRT_Static:
         """Create a parking space with spheres"""
 
         # Initializing the dimensions of the parking space
-        parking_height = 2 * self.robot_width
-        parking_width = 2 * self.robot_width
-        parking_space_dimensions = [self.goal_pos[0]-0.5*parking_width, self.goal_pos[0]+0.5*parking_width, 
-                                    self.goal_pos[1]-(1/3)*parking_height, self.goal_pos[1]+(2/3)*parking_height]
+        parking_height = 2.5 * self.robot_width
+        parking_width = 2.5 * self.robot_width
+        parking_space_dimensions = [self.final_goal_pos[0]-0.5*parking_width, self.final_goal_pos[0]+0.5*parking_width, 
+                                    self.final_goal_pos[1]-(1/3)*parking_height, self.final_goal_pos[1]+(2/3)*parking_height]
 
         # Initializing the radius of the spheres and the number of spheres
         radius = .2
@@ -276,7 +286,8 @@ class RRT_Static:
             self.goal_path.insert(0, node)
         
         # Add the goal_node to the end of the path
-        self.goal_path.append(Node(self.goal_pos, self.nodes[-1]))
+        self.goal_path.append(Node(self.final_goal_pos, self.nodes[-1]))
+        self.goal_pos = self.final_goal_pos
 
         return self.goal_path
 
@@ -382,7 +393,7 @@ class RRT_Static:
         self.goal_path = dubins_goal_path
 
 
-    def run_rrt(self, star=True, dubins=True, plot=True):
+    def run_rrt(self, star=True, dubins=True):
         """Run RRT* algorithm"""
 
         # Create the RRT until the goal is reached
@@ -394,53 +405,36 @@ class RRT_Static:
         print("Goal reached!")
 
         # Plot graph of nodes and path to goal
-        plot_graph = PlotGraph(nodes            = self.nodes, 
-                               start_pos        = self.start_pos, 
-                               goal_pos         = self.goal_pos, 
-                               obstacles        = self.obstacles, 
-                               goal_path        = self.goal_path, 
-                               field_dimensions = self.field_dimensions,
-                               plot             = plot)
+        PlotGraph(self, name="Plot of the RRT")
         
         # If star is True, create a RRT* path
         if star:
             print("Creating a shorter path using RRT*...")
             self.rrt_star()
             # Plot graph of nodes and path to goal
-            plot_graph = PlotGraph(nodes            = self.nodes, 
-                                   start_pos        = self.start_pos, 
-                                   goal_pos         = self.goal_pos, 
-                                   obstacles        = self.obstacles, 
-                                   goal_path        = self.goal_path, 
-                                   field_dimensions = self.field_dimensions,
-                                   plot             = plot)
+            PlotGraph(self, name="Plot of the RRT* path")
             
         # If dubins is True, create a Dubins path
         if dubins:
             print("Creating a path using Dubins curves...")
             self.dubins_path()
             # Plot graph of nodes and path to goal
-            plot_graph = PlotGraph(nodes            = self.nodes, 
-                                   start_pos        = self.start_pos, 
-                                   goal_pos         = self.goal_pos, 
-                                   obstacles        = self.obstacles, 
-                                   goal_path        = self.goal_path, 
-                                   field_dimensions = self.field_dimensions,
-                                   plot             = plot)
+            PlotGraph(self, name="Plot of the Dubins path")
 
 
 
 if __name__ == "__main__":
 
     # Set parameters
-    goal_pos            = np.array([8, 8, 0])
-    max_iterations      = 1000
+    goal_pos            = None
+    max_iterations      = 200
     max_step_size       = 2
     goal_threshold      = 0.5
     n_obstacles         = 10
-    field_dimensions    = np.array([(-9, 9), (-9, 9), (0, 0)])
-    robot_width         = 1
-    turn_radius         = 1.37
+    field_dimensions    = np.array([(-3, 3), (-3, 3), (0, 0)])
+    robot_width         = 0.4
+    turn_radius         = 0
+    plot                = True
 
     # Create the RRT
     rrt = RRT_Static(goal_pos           = goal_pos, 
@@ -450,7 +444,9 @@ if __name__ == "__main__":
                      max_step_size      = max_step_size, 
                      n_obstacles        = n_obstacles, 
                      robot_width        = robot_width, 
-                     turn_radius        = turn_radius)
+                     turn_radius        = turn_radius,
+                     plot               = plot
+                     )
 
     # Run the RRT
     rrt.run_rrt()

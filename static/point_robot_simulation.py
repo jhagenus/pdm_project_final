@@ -84,14 +84,14 @@ def run_point_robot(rrt):
 if __name__ == "__main__":
 
     # Set parameters
-    goal_pos            = np.array([8, 8, 0])
-    max_iterations      = 1000
+    goal_pos            = None
+    max_iterations      = 500
     max_step_size       = 2
     goal_threshold      = 0.5
     n_obstacles         = 10
-    field_dimensions    = np.array([(-9, 9), (-9, 9), (0, 0)])
+    field_dimensions    = np.array([(-4, 4), (-4, 4), (0, 0)])
     robot_width         = 0.4
-    turn_radius         = 1.37
+    turn_radius         = 0
     plot                = True
 
     #generate RRT
@@ -102,7 +102,8 @@ if __name__ == "__main__":
                      max_step_size     = max_step_size, 
                      n_obstacles       = n_obstacles, 
                      robot_width       = robot_width, 
-                     turn_radius       = turn_radius)
+                     turn_radius       = turn_radius,
+                     plot              = plot)
     
     run_point_robot(rrt)
     

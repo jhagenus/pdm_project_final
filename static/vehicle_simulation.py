@@ -230,7 +230,7 @@ if __name__ == "__main__":
 
      # Set parameters
     goal_pos            = np.array([7, 7, 0])
-    max_iterations      = 1000
+    max_iterations      = 500
     max_step_size       = 2
     goal_threshold      = 1
     n_obstacles         = 10
@@ -247,10 +247,11 @@ if __name__ == "__main__":
                      max_step_size     = max_step_size, 
                      n_obstacles       = n_obstacles, 
                      robot_width       = robot_width, 
-                     turn_radius       = turn_radius)
+                     turn_radius       = turn_radius,
+                     plot              = plot)
 
     # Run the RRT algorithm and terminate if the goal has not been reached
-    reached = rrt.run_rrt(star=True, dubins=True, plot=plot)
+    reached = rrt.run_rrt(star=True, dubins=True)
 
     # Get the path from start to goal
     dubins_path = [node.position for node in rrt.goal_path]
