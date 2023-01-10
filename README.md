@@ -11,7 +11,7 @@
 - [Setup](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup)
   - [Setup of the gym environment](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-gym-environment)
   - [Setup of the project](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-project)
-  - [Setup of the gym environment using anaconda](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#Setup-of-the-gym-environment-using-anaconda)
+  - [Setup using anaconda](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#Setup-using-anaconda)
 - [Running the simulation](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#running-the-simulation)
 
 
@@ -40,7 +40,7 @@ pip install --force-reinstall numpy==1.19.5
 git clone git@github.com:jhagenus/pdm_project_final.git
 ```
 
-### Setup of the gym environment using anaconda
+### Setup using anaconda
 ```
 git clone https://github.com/maxspahn/gym_envs_urdf.git
 cd gym_envs_urdf
