@@ -15,7 +15,7 @@
 - [Running the simulation](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#running-the-simulation)
 
 
-## Setup
+## Starting the simulation using Poetry
 The following sectors will describe the steps needed for the setup of the environment. 
 
 ### Setup of the gym environment
@@ -41,6 +41,15 @@ cd ~/gym_envs_urdf/pdm_project_final
 python3 -m pip install -r requirements.txt
 ```
 
+### Running the simulation
+To execute the simulation, run the following commands in the poetry shell:
+```
+cd ~/gym_envs_urdf/pdm_project_final/
+python3 ./static/vehicle_simulation.py
+```
+
+## Running the simulation using Conda
+
 ### Setup using anaconda
 ```
 git clone https://github.com/maxspahn/gym_envs_urdf.git
@@ -53,14 +62,8 @@ cd ..
 pip3 install .
 ```
 
-## Running the simulation
+### Running the simulation
 To execute the simulation, run the following commands in the poetry shell:
-```
-cd ~/gym_envs_urdf/pdm_project_final/
-python3 ./static/vehicle_simulation.py
-```
-
-Or the following commands when you are using anaconda:
 ```
 conda activate PDM3.8
 cd ~/gym_envs_urdf/pdm_project_final/
