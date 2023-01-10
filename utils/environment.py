@@ -1,6 +1,7 @@
 import numpy as np
 import gym
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
+import pybullet as p
 
 
 
@@ -20,6 +21,12 @@ class Environment:
         # Create the environment, add the walls and obstacles
         self.env = gym.make("urdf-env-v0", robots=robots, render=True)
         self.env.reset(pos=start_pose)
+        field_width = self.field_dimensions[0][1] - self.field_dimensions[0][0]
+        p.resetDebugVisualizerCamera(cameraDistance=field_width/2, 
+                                     cameraYaw=20, 
+                                     cameraPitch=-65, 
+                                     cameraTargetPosition=[self.field_dimensions[0][1]/10, self.field_dimensions[1][0]/2.5, 0])
+        self.generate_outer_walls()
         self.generate_obstacles()
 
     
@@ -40,3 +47,30 @@ class Environment:
                 }
             sphereObst = SphereObstacle(name="simpleSphere", content_dict=obs_dict)
             self.env.add_obstacle(sphereObst)
+    
+
+    def generate_outer_walls(self):
+
+        wall_width = 0.2
+        wall_height = 0.5
+        scale = 1.2
+        
+        # Create the verticle walls of the environment
+        field_height = self.field_dimensions[1][1] - self.field_dimensions[1][0]
+        wall_length = scale*field_height + 2 * wall_width
+        verticle_wall_dim = np.array([wall_width, wall_length, wall_height])
+        verticle_wall_poses = [
+                [scale*self.field_dimensions[0][0]-wall_width, wall_width/2, 0],
+                [scale*self.field_dimensions[0][1]+wall_width, -wall_width/2, 0]
+            ]
+        self.env.add_walls(verticle_wall_dim, verticle_wall_poses)
+
+        # Create the horizontal walls of the environment
+        field_width = self.field_dimensions[0][1] - self.field_dimensions[0][0]
+        wall_length = scale*field_width + 2 * wall_width
+        horizontal_wall_dim = np.array([wall_width, wall_length, wall_height])
+        horizontal_wall_poses = [
+                [-wall_width/2, scale*self.field_dimensions[1][0]-wall_width, 0.5 * np.pi],
+                [wall_width/2, scale*self.field_dimensions[1][1]+wall_width, 0.5 * np.pi]
+            ]
+        self.env.add_walls(horizontal_wall_dim, horizontal_wall_poses)

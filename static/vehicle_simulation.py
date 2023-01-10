@@ -4,14 +4,16 @@ import time
 import copy
 import math
 import sys
+from pathlib import Path
 
-# sys.path.append("../../../gym_envs_urdf")
+# Adding the needed directories to the system
+project_dir = Path(__file__).resolve().parent.parent
+gym_dir = project_dir.parent.parent
+sys.path.append(str(project_dir))
+sys.path.append(str(gym_dir))
 
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
 from urdfenvs.robots.prius import Prius
-
-# make sure the folder utils can be located
-sys.path.append('../pdm_project_final')
 
 from utils.vehicle_controller import controller
 from utils.environment import Environment
@@ -235,10 +237,10 @@ class runPrius():
 if __name__ == "__main__":
 
      # Set parameters
-    goal_pos            = np.array([8, 8, 0])
+    goal_pos            = np.array([7, 7, 0])
     max_iterations      = 1000
     max_step_size       = 2
-    goal_threshold      = 0.5
+    goal_threshold      = 1
     n_obstacles         = 10
     field_dimensions    = np.array([(-9, 9), (-9, 9), (0, 0)])
     robot_width         = 1
