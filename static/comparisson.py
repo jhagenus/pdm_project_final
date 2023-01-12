@@ -7,6 +7,19 @@ from rrt_static import RRT_Static
 from utils.plot_graph import PlotGraph
 
 
+def calculate_distance_to_goal(rrt):
+
+    distance = 0
+    path = rrt.goal_path
+    for i in range(len(path) - 1):
+        first_pos = path[i].position
+        second_pos = path[i + 1].position
+        distance = np.linalg.norm(second_pos - first_pos)
+        distance += distance
+    
+    return distance
+
+
 if __name__ == '__main__':
 
     # set initial parameters
@@ -22,7 +35,7 @@ if __name__ == '__main__':
     plot                = False
 
 
-    # Create the RRT
+    # Initializing the RRT classes
     rrt = RRT_Static(goal_pos           = goal_pos, 
                      goal_threshold     = goal_threshold, 
                      field_dimensions   = field_dimensions, 
@@ -48,29 +61,26 @@ if __name__ == '__main__':
 
 
 
+    # Calculating the runtime
 
     start_time_star = time.time()
-
     path = rrt_star.planning(animation=False)
-
     end_time_star = time.time()
 
-
     start_time_proposed = time.time()
-
     rrt.run_rrt(dubins=False)
-
     end_time_proposed = time.time()
 
     print("\n\n\n")
 
-    print("RUNTIME OF THE DIFFERENT ALGORITHMS:\n")
-    print("- Time taken for proposed method: ", end_time_proposed - start_time_proposed)
-    print("- Time taken for RRT*: ", end_time_star - start_time_star)
+    print("RUNTIME OF THE DIFFERENT ALGORITHMS:")
+    print(" - Proposed method: ", end_time_proposed - start_time_proposed)
+    print(" - RRT*: ", end_time_star - start_time_star)
 
-    print("\n")
 
-    # Plot the graphs
+
+    # Plotting the graphs
+
     plot = True
     rrt.plot = plot
 
@@ -94,4 +104,16 @@ if __name__ == '__main__':
     # Plot the graphs
     PlotGraph(rrt, name="Proposed optimization method")
     PlotGraph(rrt_star_new, name="RRT* method")
+
+
+
+    # Calculating the distance to the goal
+
+    distance_proposed = calculate_distance_to_goal(rrt)
+    distance_star = calculate_distance_to_goal(rrt_star_new)
+
+    print("\n")
+    print("DISTANCE TO THE GOAL:")
+    print(" - Proposed method: ", distance_proposed)
+    print(" - RRT*: ", distance_star)
 
