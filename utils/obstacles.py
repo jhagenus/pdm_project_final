@@ -41,6 +41,11 @@ class Circle:
         # Calculate the direction vector and normalize it by dividing by the distance
         dirn = np.subtract(target_pos, source_pos)
         dist = np.linalg.norm(dirn)
+
+        # If the distance between the source and target nodes is 0, there can be no intersection
+        if dist == 0:
+            return False
+        
         dirn /= dist # normalizDynamicSphereObstaclee
 
         # Add the robot radius to the circle radius to account for the robot's size
