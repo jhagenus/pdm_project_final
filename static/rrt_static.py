@@ -30,7 +30,7 @@ class RRT_Static:
         - robot_width: The width of the robot. (float)
         - plot: A boolean to indicate whether to plot the RRT tree before running the simulation. (bool)"""
 
-    def __init__(self, goal_pos, goal_threshold, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_width, turn_radius=0, plot=True):
+    def __init__(self, goal_pos, goal_threshold, field_dimensions, max_iterations, max_step_size, n_obstacles, robot_width, turn_radius=0, plot=True, start_pos=None):
         self.goal_pos = goal_pos
         self.goal_threshold = goal_threshold
         self.field_dimensions = field_dimensions
@@ -40,11 +40,28 @@ class RRT_Static:
         self.robot_width = robot_width
         self.turn_radius = turn_radius
         self.plot = plot
+        self.start_pos = start_pos
 
         self.reached = False
         self.obstacles = []
         self.goal_path = []
         self.nodes = []
+
+        # Creating the environment
+        self.generate_start_and_goal()
+        self.create_parking_space()
+        self.create_circles()
+
+    
+    def reset(self, goal_pos=None, start_pos=None, obstacles=[]):
+        """Reset the RRT tree."""
+        self.reached = False
+        self.obstacles = obstacles
+        self.goal_path = []
+        self.nodes = []
+
+        self.goal_pos = goal_pos
+        self.start_pos = start_pos
 
         self.generate_start_and_goal()
 
@@ -52,11 +69,12 @@ class RRT_Static:
     def generate_start_and_goal(self):
         """Generate a start and goal path for the RRT algorithm."""
 
-        # Generate a random start position.
-        x = np.random.uniform(self.field_dimensions[0][0], 0)
-        y = np.random.uniform(self.field_dimensions[1][0], 0)
-        z = np.random.uniform(self.field_dimensions[2][0], self.field_dimensions[2][1])
-        self.start_pos = np.array([x, y, z])
+        if self.start_pos is None:
+            # Generate a random start position.
+            x = np.random.uniform(self.field_dimensions[0][0], 0)
+            y = np.random.uniform(self.field_dimensions[1][0], 0)
+            z = np.random.uniform(self.field_dimensions[2][0], self.field_dimensions[2][1])
+            self.start_pos = np.array([x, y, z])
 
         # Generate a random goal position.
         if self.goal_pos is None:
@@ -295,10 +313,6 @@ class RRT_Static:
     def create_rrt(self):
         """Create a RRT."""
 
-        # Creating the parking place and the circles for the obstacles in the environment
-        self.create_parking_space()
-        self.create_circles()
-
         # While loop to create the RRT until the goal is reached or the maximum number of iterations is reached
         iter = 0
         while iter <= self.max_iterations:
@@ -401,6 +415,7 @@ class RRT_Static:
         reached = self.create_rrt()
         while not reached:
             print("Goal not reached, trying again...")
+            self.reset(goal_pos=self.goal_pos, start_pos=self.start_pos, obstacles=self.obstacles)
             reached = self.create_rrt()
         print("Goal reached!")
 
@@ -426,12 +441,13 @@ class RRT_Static:
 if __name__ == "__main__":
 
     # Set parameters
-    goal_pos            = None
-    max_iterations      = 200
+    start_pos           = np.array([-7, -7, 0])
+    goal_pos            = np.array([7, 7, 0])
+    max_iterations      = 500
     max_step_size       = 2
     goal_threshold      = 0.5
     n_obstacles         = 10
-    field_dimensions    = np.array([(-3, 3), (-3, 3), (0, 0)])
+    field_dimensions    = np.array([(-8, 8), (-8, 8), (0, 0)])
     robot_width         = 0.4
     turn_radius         = 0
     plot                = True
@@ -449,6 +465,6 @@ if __name__ == "__main__":
                      )
 
     # Run the RRT
-    rrt.run_rrt()
+    rrt.run_rrt(dubins=False)
 
     
