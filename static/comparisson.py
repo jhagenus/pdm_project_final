@@ -11,15 +11,15 @@ from rrt_star import RRTStar
 
 def calculate_distance_to_goal(rrt):
 
-    distance = 0
+    distance_to_goal = 0
     path = rrt.goal_path
     for i in range(len(path) - 1):
         first_pos = path[i].position
         second_pos = path[i + 1].position
         distance = np.sqrt((first_pos[0] - second_pos[0]) ** 2 + (first_pos[1] - second_pos[1]) ** 2)
-        distance += distance
-    
-    return distance
+        distance_to_goal += distance
+
+    return distance_to_goal
 
 def intersection(self, source_pos, target_pos):
         """Check line-sphere (circle) intersection
