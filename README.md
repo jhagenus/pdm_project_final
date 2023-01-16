@@ -8,15 +8,17 @@
 - D.J. Scherrenburg - 5175151
 
 ### Table of Contents
-- [Setup](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup)
+- [Setup using Poetry](https://github.com/jhagenus/pdm_project_final#setup-using-poetry)
   - [Setup of the gym environment](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-gym-environment)
   - [Setup of the project](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-project)
-  - [Setup using anaconda](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#Setup-using-anaconda)
-- [Running the simulation](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#running-the-simulation)
+  - [Running the simulation](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#running-the-simulation)
+- [Setup using anaconda](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#Setup-using-Conda)
+  - [Setup of the environment](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#setup-of-the-environment)
+  - [Running the simulation](https://github.com/jhagenus/pdm_project_final/blob/main/README.md#running-the-simulation)
 
 
-## Starting the simulation using Poetry
-The following sectors will describe the steps needed for the setup of the environment. 
+## Setup using Poetry
+The following sectors will describe the steps needed for the setup of the environment using Poetry. If this does not work for you, [please try using Conda]
 
 ### Setup of the gym environment
 The environment that is used for the project is a gym environment. This environment is created by Max Spahn.
@@ -49,9 +51,11 @@ cd ~/gym_envs_urdf/pdm_project_final/
 python3.8 ./static/vehicle_simulation.py
 ```
 
-## Running the simulation using Conda
+## Setup using Conda
+The following sectors will describe the steps needed for the setup of the environment using Conda. If this does not work for you, [please try using Poetry](https://github.com/jhagenus/pdm_project_final#setup-using-poetry)
 
-### Setup using anaconda
+
+### Setup of the environment
 ```
 git clone https://github.com/maxspahn/gym_envs_urdf.git
 cd gym_envs_urdf
