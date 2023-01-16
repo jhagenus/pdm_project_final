@@ -351,8 +351,8 @@ class RRT_Static:
         if (self.final_goal_pos == self.goal_pos).all():
             # If there is no parking node, add the goal node to the new path
             new_goal_path = self.goal_path[-1:]
-            # Dont remove start and goal node from goal path
-            goal_path = self.goal_path
+            # Remove goal node from goal path
+            goal_path = self.goal_path[:-1]
         else:
             # Add the goal node and the parking node to the new path
             new_goal_path = self.goal_path[-2:]
