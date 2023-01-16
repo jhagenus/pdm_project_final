@@ -68,7 +68,7 @@ pip3 install .
 ```
 
 ### Running the simulation
-To execute the simulation, run the following commands in the poetry shell:
+To execute the simulation, run the following commands in the terminal:
 ```
 conda activate PDM3.8
 cd ~/gym_envs_urdf/pdm_project_final/
