@@ -348,16 +348,10 @@ class RRT_Static:
     def rrt_star(self):
         """Create a RRT* based on the path of the RRT."""
         
-        if (self.final_goal_pos == self.goal_pos).all():
-            # If there is no parking node, add the goal node to the new path
-            new_goal_path = self.goal_path[-1:]
-            # Remove goal node from goal path
-            goal_path = self.goal_path[:-1]
-        else:
-            # Add the goal node and the parking node to the new path
-            new_goal_path = self.goal_path[-2:]
-            # Remove the start and goal to make sure that the path will always include the parking node and the node to start driving forward
-            goal_path = self.goal_path[1:-1]
+        # Add the goal node and the parking node to the new path
+        new_goal_path = self.goal_path[-2:]
+        # Remove the start and goal to make sure that the path will always include the parking node and the node to start driving forward
+        goal_path = self.goal_path[1:-1]
 
         while True:
             # Check if the goal path is (nearly) empty
