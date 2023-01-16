@@ -45,6 +45,7 @@ sudo apt install python3.8 -y    # Installation to make sure that the right vers
 ```
 python3.8 -m pip install -r requirements.txt    # Installation to make sure that the right version of the needed modules is installed.
 ```
+You can ignore the errors that occur.
 
 ### Running the simulation
 To execute the simulation, run the following commands in the poetry shell:
