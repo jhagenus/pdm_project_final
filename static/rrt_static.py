@@ -49,7 +49,7 @@ class RRT_Static:
 
         # Creating the environment
         self.generate_start_and_goal()
-        # self.create_parking_space()
+        self.create_parking_space()
         self.create_circles()
 
     

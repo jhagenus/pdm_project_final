@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 *env/
+*.csv
+static/comparisson.py
+static/create_tables.py
+static/rrt.py
+static/rrt_static.py
