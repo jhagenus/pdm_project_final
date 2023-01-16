@@ -348,11 +348,16 @@ class RRT_Static:
     def rrt_star(self):
         """Create a RRT* based on the path of the RRT."""
         
-        # Add the goal node and the parking node to the new path
-        new_goal_path = self.goal_path[-2:]
-
-        # Remove the start and goal to make sure that the path will always include the parking node and the node to start driving forward
-        goal_path = self.goal_path[1:-1]
+        if (self.final_goal_pos == self.goal_pos).all():
+            # If there is no parking node, add the goal node to the new path
+            new_goal_path = self.goal_path[-1:]
+            # Dont remove start and goal node from goal path
+            goal_path = self.goal_path
+        else:
+            # Add the goal node and the parking node to the new path
+            new_goal_path = self.goal_path[-2:]
+            # Remove the start and goal to make sure that the path will always include the parking node and the node to start driving forward
+            goal_path = self.goal_path[1:-1]
 
         while True:
             # Check if the goal path is (nearly) empty
@@ -360,7 +365,7 @@ class RRT_Static:
                 break
             
             # Define the node that needs to be reached
-            destination_node = goal_path[-1]
+            destination_node = new_goal_path[0]
 
             # Loop through all nodes in the goal path, starting from the first node
             for i, source_node in enumerate(goal_path):
@@ -369,10 +374,10 @@ class RRT_Static:
                 if self.check_intersection(source_node.position, destination_node.position):
                     continue
 
-                # If the destination is reachable, add it the current node to the new goal path and remove all nodes after the current node from the goal path
+                # If the destination is reachable, add it the current node to the new goal path and remove all nodes from the current node from the goal path
                 else:
                     new_goal_path.insert(0, source_node)
-                    goal_path = goal_path[:i+1]
+                    goal_path = goal_path[:i]
                     break
         
         # Add the start node to the new path
@@ -412,10 +417,11 @@ class RRT_Static:
 
         # Create the RRT until the goal is reached
         print("\nLooking for a path to the goal...")
+        start_pos, goal_pos = self.start_pos, self.goal_pos
         reached = self.create_rrt()
         while not reached:
             print("Goal not reached, trying again...")
-            self.reset(goal_pos=self.goal_pos, start_pos=self.start_pos, obstacles=self.obstacles)
+            self.reset(goal_pos=goal_pos, start_pos=start_pos, obstacles=self.obstacles)
             reached = self.create_rrt()
         print("Goal reached!")
 
